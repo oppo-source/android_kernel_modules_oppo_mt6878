@@ -67,6 +67,14 @@ ccflags-y += -I$(KO_CODE_PATH)/include
 ccflags-y += -I$(KO_CODE_PATH)/base/include
 ccflags-y += -I$(KO_CODE_PATH)/conf/include
 
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+OPLUS_FEATURE_CONN_POWER_MONITOR := y
+ifeq ($(OPLUS_FEATURE_CONN_POWER_MONITOR),y)
+ccflags-y += -DOPLUS_FEATURE_CONN_POWER_MONITOR
+ccflags-y += -I$(KO_CODE_PATH)/conn_drv/connv2/platform/common
+endif
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
+
 # adaptor
 ccflags-y += -I$(KO_CODE_PATH)/adaptor/connsyslog
 ccflags-y += -I$(KO_CODE_PATH)/adaptor/coredump
@@ -251,6 +259,11 @@ $(MODULE_NAME)-objs += conn_drv/connv2/platform/pmic_mng.o
 $(MODULE_NAME)-objs += conn_drv/connv2/platform/emi_mng.o
 $(MODULE_NAME)-objs += conn_drv/connv2/platform/consys_reg_mng.o
 $(MODULE_NAME)-objs += conn_drv/connv2/debug_utility/conninfra_dbg.o
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+ifeq ($(OPLUS_FEATURE_CONN_POWER_MONITOR),y)
+$(MODULE_NAME)-objs += conn_drv/connv2/platform/common/oplus_conn_event.o
+endif
+#endif  /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 
 ############################
 # connv3

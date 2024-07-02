@@ -578,6 +578,16 @@ static struct mtk_mbus_frame_desc_entry frame_desc_cus11[] = {
 			.user_data_desc = VC_STAGGER_NE,
 		},
 	},
+    {
+        .bus.csi2 = {
+            .channel = 0,
+            .data_type = 0x30,
+            .hsize = 2048,
+            .vsize = 1536,
+            .user_data_desc = VC_PDAF_STATS_NE_PIX_1,
+            .dt_remap_to_type = MTK_MBUS_FRAME_DESC_REMAP_TO_RAW10,
+        },
+    },
 };
 static struct subdrv_mode_struct mode_struct[] = {
 	{/*Reg_A_QBIN(VBIN)_4096x3072_30FPS with PDAF VB_max*/

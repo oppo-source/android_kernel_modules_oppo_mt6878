@@ -1257,6 +1257,9 @@ static int ext_ctrl(struct adaptor_ctx *ctx, struct v4l2_ctrl *ctrl, struct sens
 		struct mtk_csi_param *csi_param = ctrl->p_new.p;
 
 		if (csi_param) {
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+			csi_param->dphy_ctle = mode->csi_param.dphy_ctle;
+#endif
 			csi_param->cphy_settle = mode->csi_param.cphy_settle;
 			csi_param->dphy_clk_settle = mode->csi_param.dphy_clk_settle;
 			csi_param->dphy_data_settle = mode->csi_param.dphy_data_settle;

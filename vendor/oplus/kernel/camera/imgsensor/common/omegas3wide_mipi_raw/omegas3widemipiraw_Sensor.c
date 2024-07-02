@@ -276,7 +276,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.ae_binning_ratio = 1,
 		.delay_frame = 4,
-		.csi_param = {},
+		.csi_param = {
+			.dphy_ctle = 2,
+		},
 		.ana_gain_max = BASEGAIN * 16,
 		.sensor_setting_info = {
 			.sensor_scenario_usage = NORMAL_MASK,
@@ -322,7 +324,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.ae_binning_ratio = 1,
 		.delay_frame = 4,
-		.csi_param = {},
+		.csi_param = {
+			.dphy_ctle = 2,
+		},
 		.ana_gain_max = BASEGAIN * 16,
 		.sensor_setting_info = {
 			.sensor_scenario_usage = UNUSE_MASK,
@@ -368,7 +372,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.ae_binning_ratio = 1,
 		.delay_frame = 2,
-		.csi_param = {},
+		.csi_param = {
+			.dphy_ctle = 2,
+		},
 		.ana_gain_max = BASEGAIN * 16,
 		.sensor_setting_info = {
 			.sensor_scenario_usage = NORMAL_MASK,
@@ -414,7 +420,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.ae_binning_ratio = 1,
 		.delay_frame = 2,
-		.csi_param = {},
+		.csi_param = {
+			.dphy_ctle = 2,
+		},
 		.ana_gain_max = BASEGAIN * 16,
 		.sensor_setting_info = {
 			.sensor_scenario_usage = NORMAL_MASK,
@@ -460,7 +468,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.ae_binning_ratio = 1,
 		.delay_frame = 2,
-		.csi_param = {},
+		.csi_param = {
+			.dphy_ctle = 2,
+		},
 		.ana_gain_max = BASEGAIN * 16,
 		.sensor_setting_info = {
 			.sensor_scenario_usage = UNUSE_MASK,
@@ -506,7 +516,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.ae_binning_ratio = 1,
 		.delay_frame = 2,
-		.csi_param = {},
+		.csi_param = {
+			.dphy_ctle = 2,
+		},
 		.ana_gain_max = BASEGAIN * 16,
 		.sensor_setting_info = {
 			.sensor_scenario_usage = NORMAL_MASK,
@@ -552,7 +564,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.ae_binning_ratio = 1,
 		.delay_frame = 2,
-		.csi_param = {},
+		.csi_param = {
+			.dphy_ctle = 2,
+		},
 		.ana_gain_max = BASEGAIN * 16,
 		.sensor_setting_info = {
 			.sensor_scenario_usage = UNUSE_MASK,
@@ -598,7 +612,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.ae_binning_ratio = 1,
 		.delay_frame = 2,
-		.csi_param = {},
+		.csi_param = {
+			.dphy_ctle = 2,
+		},
 		.ana_gain_max = BASEGAIN * 16,
 		.sensor_setting_info = {
 			.sensor_scenario_usage = UNUSE_MASK,
@@ -644,7 +660,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.ae_binning_ratio = 1,
 		.delay_frame = 2,
-		.csi_param = {},
+		.csi_param = {
+			.dphy_ctle = 2,
+		},
 		.ana_gain_max = BASEGAIN * 16,
 		.sensor_setting_info = {
 			.sensor_scenario_usage = UNUSE_MASK,
@@ -690,7 +708,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.ae_binning_ratio = 1,
 		.delay_frame = 2,
-		.csi_param = {},
+		.csi_param = {
+			.dphy_ctle = 2,
+		},
 		.ana_gain_max = BASEGAIN * 16,
 		.sensor_setting_info = {
 			.sensor_scenario_usage = UNUSE_MASK,
@@ -736,7 +756,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.ae_binning_ratio = 1,
 		.delay_frame = 2,
-		.csi_param = {},
+		.csi_param = {
+			.dphy_ctle = 2,
+		},
 		.ana_gain_max = BASEGAIN * 16,
 		.sensor_setting_info = {
 			.sensor_scenario_usage = UNUSE_MASK,
@@ -782,7 +804,9 @@ static struct subdrv_mode_struct mode_struct[] = {
 		},
 		.ae_binning_ratio = 1,
 		.delay_frame = 2,
-		.csi_param = {},
+		.csi_param = {
+			.dphy_ctle = 2,
+		},
 		.ana_gain_max = BASEGAIN * 16,
 		.sensor_setting_info = {
 			.sensor_scenario_usage = NORMAL_MASK,

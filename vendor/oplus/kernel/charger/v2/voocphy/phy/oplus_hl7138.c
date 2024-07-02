@@ -811,6 +811,7 @@ static int hl7138_turnon_sys_clk(struct oplus_voocphy_manager *chip)
 	} while (retry <= 3);
 
 	/* combined operation, let sys_clk return auto mode, current restore to uA level */
+	hl7138_write_byte(chip->client, HL7138_REG_02, 0xF0);
 	hl7138_write_byte(chip->client, HL7138_REG_40, 0x0D);	/* force enable adc read average with 4 samples data */
 	hl7138_write_byte(chip->client, HL7138_REG_14, 0xC8);	/* soft reset register and disable watchdog */
 	mdelay(2);

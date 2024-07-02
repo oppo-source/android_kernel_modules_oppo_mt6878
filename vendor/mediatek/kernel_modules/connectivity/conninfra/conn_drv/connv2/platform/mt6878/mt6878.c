@@ -5,6 +5,13 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME "@(%s:%d) " fmt, __func__, __LINE__
 
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+//add for mtk connectivity power monitor
+#include <oplus_conn_event.h>
+#include <linux/string.h>
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
+
+
 #include "../include/consys_hw.h"
 #include "../include/connsys_library.h"
 #include "../include/consys_reg_mng.h"
@@ -28,6 +35,10 @@ struct rf_cr_backup_data {
 	unsigned int value2;
 };
 
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+//add for mtk connectivity power monitor
+static char mUevent[256] = {'\0'};
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 static struct consys_plat_thermal_data_mt6878 g_consys_plat_therm_data;
 
 /* For calibration backup/restore */
@@ -185,6 +196,10 @@ static void consys_power_state(void)
 		}
 	}
 	pr_info("[%s] [0x%x] %s", __func__, r, buf);
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+	//add for mtk connectivity power monitor
+	snprintf(mUevent, sizeof(mUevent), "consys=power_state:%s;", buf);
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 
 	consys_print_irq_status();
 
@@ -343,7 +358,46 @@ static int consys_power_state_dump(char *buf, unsigned int size, int print_log)
 			pr_info("%s", buf_p);
 
 		/* Power state */
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+		//add for mtk connectivity power monitor
+		memset(mUevent, '\0', sizeof(mUevent));
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 		consys_power_state();
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+		//add for mtk connectivity power monitor
+		if (strlen(mUevent) > 0) {
+			snprintf(&(mUevent[strlen(mUevent)]), sizeof(mUevent)-strlen(mUevent),
+				"conninfra:%lu.%03lu,%lu;wf:%lu.%03lu,%lu;bt:%lu.%03lu,%lu;gps:%lu.%03lu,%lu;"
+				"[total]conninfra:%lu.%03lu,%lu;wf:%lu.%03lu,%lu;"
+				"bt:%lu.%03lu,%lu;gps:%lu.%03lu,%lu;",
+			mt6878_power_state_dump_data[1],
+			mt6878_power_state_dump_data[2],
+			mt6878_power_state_dump_data[3],
+			mt6878_power_state_dump_data[4],
+			mt6878_power_state_dump_data[5],
+			mt6878_power_state_dump_data[6],
+			mt6878_power_state_dump_data[7],
+			mt6878_power_state_dump_data[8],
+			mt6878_power_state_dump_data[9],
+			mt6878_power_state_dump_data[10],
+			mt6878_power_state_dump_data[11],
+			mt6878_power_state_dump_data[12],
+			mt6878_power_state_dump_data[13],
+			mt6878_power_state_dump_data[14],
+			mt6878_power_state_dump_data[15],
+			mt6878_power_state_dump_data[16],
+			mt6878_power_state_dump_data[17],
+			mt6878_power_state_dump_data[18],
+			mt6878_power_state_dump_data[19],
+			mt6878_power_state_dump_data[20],
+			mt6878_power_state_dump_data[21],
+			mt6878_power_state_dump_data[22],
+			mt6878_power_state_dump_data[23],
+			mt6878_power_state_dump_data[24]);
+
+			oplusConnSendUevent(mUevent);
+		}
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 	}
 
 	round++;

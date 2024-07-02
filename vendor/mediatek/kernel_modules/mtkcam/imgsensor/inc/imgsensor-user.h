@@ -412,6 +412,9 @@ struct mtk_csi_param {
 	__u8 not_fixed_dphy_settle;
 	__u8 dphy_init_deskew_support;
 	__u8 cphy_lrte_support;
+	// ifdef OPLUS_FEATURE_CAMERA_COMMON
+	__u8 dphy_ctle;
+	// endif OPLUS_FEATURE_CAMERA_COMMON
 };
 
 struct mtk_sensor_saturation_info {

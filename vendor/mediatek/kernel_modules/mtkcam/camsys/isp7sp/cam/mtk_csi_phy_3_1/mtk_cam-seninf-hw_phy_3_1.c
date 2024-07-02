@@ -26,6 +26,10 @@
 #include "mtk_cam-seninf-tsrec.h"
 #include "imgsensor-user.h"
 
+#ifndef OPLUS_FEATURE_CAMERA_COMMON
+#define OPLUS_FEATURE_CAMERA_COMMON
+#endif
+
 #define SENINF_CK 312000000
 #define CYCLE_MARGIN 1
 #define RESYNC_DMY_CNT 4
@@ -2903,7 +2907,113 @@ static int csirx_phyA_setting(struct seninf_ctx *ctx)
 				    RG_CSI0_CPHY_T0_HSMODE_EN, 1);
 			SENINF_BITS(baseB, CDPHY_RX_ANA_0,
 				    RG_CSI0_CPHY_T1_HSMODE_EN, 1);
+#ifdef OPLUS_FEATURE_CAMERA_COMMON
+			switch (ctx->csi_param.dphy_ctle) {
+				case 1:
+					dev_info(ctx->dev, "EQ_SR0 = 0001, dphy_ctle = %d\n", ctx->csi_param.dphy_ctle);
+					//1.EQ_SR0 = 0000
+					SENINF_WRITE_REG(baseA, CDPHY_RX_ANA_5, 0x55);
+					SENINF_WRITE_REG(baseB, CDPHY_RX_ANA_5, 0x55);
+					dev_info(ctx->dev, "CDPHY_RX_ANA_5:(0x%08x)\n", SENINF_READ_REG(baseA, CDPHY_RX_ANA_5));
+					break;
+				case 2:
+					dev_info(ctx->dev, "EQ_SR0 = 0001, dphy_ctle = %d\n", ctx->csi_param.dphy_ctle);
+					//1.EQ_SR0 = 0001
+					SENINF_WRITE_REG(baseA, CDPHY_RX_ANA_5, 0x157);
+					SENINF_WRITE_REG(baseB, CDPHY_RX_ANA_5, 0x157);
+					dev_info(ctx->dev, "CDPHY_RX_ANA_5:(0x%08x)\n", SENINF_READ_REG(baseA, CDPHY_RX_ANA_5));
+					break;
+				case 3:
+					//2.EQ_SR0 = 0011
+					dev_info(ctx->dev, "EQ_SR0 = 0011, dphy_ctle = %d\n", ctx->csi_param.dphy_ctle);
+					SENINF_WRITE_REG(baseA, CDPHY_RX_ANA_5, 0x357);
+					SENINF_WRITE_REG(baseB, CDPHY_RX_ANA_5, 0x357);
+					dev_info(ctx->dev, "CDPHY_RX_ANA_5:(0x%08x)\n", SENINF_READ_REG(baseA, CDPHY_RX_ANA_5));
+					break;
+				case 4:
+					//3.EQ_SR0 = 0111
+					dev_info(ctx->dev, "EQ_SR0 = 0111, dphy_ctle = %d\n", ctx->csi_param.dphy_ctle);
+					SENINF_WRITE_REG(baseA, CDPHY_RX_ANA_5, 0x757);
+					SENINF_WRITE_REG(baseB, CDPHY_RX_ANA_5, 0x757);
+					dev_info(ctx->dev, "CDPHY_RX_ANA_5:(0x%08x)\n", SENINF_READ_REG(baseA, CDPHY_RX_ANA_5));
+					break;
+				default:
+					dev_info(ctx->dev, "Default: EQ_SR0 = 0000, dphy_ctle = %d\n", ctx->csi_param.dphy_ctle);
+					if (data_rate < 1500000000) {
+						/* DPHY non-split mode < 1.5G */
+						SENINF_BITS(baseA, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_BW, 0x1);
+						SENINF_BITS(baseA, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_DG0_EN, 0x0);
+						SENINF_BITS(baseA, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_SR0, 0x0);
+						SENINF_BITS(baseA, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_IS, 0x2);
+						SENINF_BITS(baseA, CDPHY_RX_ANA_14,
+								RG_CSI0_CDPHY_EQ_OS_IS, 0x1);
 
+						SENINF_BITS(baseB, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_BW, 0x1);
+						SENINF_BITS(baseB, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_DG0_EN, 0x0);
+						SENINF_BITS(baseB, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_SR0, 0x0);
+						SENINF_BITS(baseB, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_IS, 0x2);
+						SENINF_BITS(baseB, CDPHY_RX_ANA_14,
+								RG_CSI0_CDPHY_EQ_OS_IS, 0x1);
+					} else if (data_rate < 2500000000) {
+						/* DPHY non-split mode 1.5G ~ 2.5G */
+						SENINF_BITS(baseA, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_BW, 0x1);
+						SENINF_BITS(baseA, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
+						SENINF_BITS(baseA, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_SR0, 0x0);
+						SENINF_BITS(baseA, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_IS, 0x2);
+						SENINF_BITS(baseA, CDPHY_RX_ANA_14,
+								RG_CSI0_CDPHY_EQ_OS_IS, 0x1);
+
+						SENINF_BITS(baseB, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_BW, 0x1);
+						SENINF_BITS(baseB, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
+						SENINF_BITS(baseB, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_SR0, 0x0);
+						SENINF_BITS(baseB, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_IS, 0x2);
+						SENINF_BITS(baseB, CDPHY_RX_ANA_14,
+								RG_CSI0_CDPHY_EQ_OS_IS, 0x1);
+					} else if (data_rate < 4500000000)  {
+						/* DPHY non-split mode 2.5G ~ 4.5G */
+						SENINF_BITS(baseA, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_BW, 0x3);
+						SENINF_BITS(baseA, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
+						SENINF_BITS(baseA, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_SR0, 0x0);
+						SENINF_BITS(baseA, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_IS, 0x1);
+						SENINF_BITS(baseA, CDPHY_RX_ANA_14,
+								RG_CSI0_CDPHY_EQ_OS_IS, 0x0);
+
+						SENINF_BITS(baseB, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_BW, 0x3);
+						SENINF_BITS(baseB, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_DG0_EN, 0x1);
+						SENINF_BITS(baseB, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_SR0, 0x0);
+						SENINF_BITS(baseB, CDPHY_RX_ANA_5,
+								RG_CSI0_CDPHY_EQ_IS, 0x1);
+						SENINF_BITS(baseB, CDPHY_RX_ANA_14,
+								RG_CSI0_CDPHY_EQ_OS_IS, 0x0);
+					} else {
+						dev_info(ctx->dev, "[ERROR]data_rate %llu bps > 4.5G not support\n", data_rate);
+					}
+					break;
+			}
+#else
 			if (data_rate < 1500000000) {
 				/* DPHY non-split mode < 1.5G */
 				SENINF_BITS(baseA, CDPHY_RX_ANA_5,
@@ -2976,7 +3086,7 @@ static int csirx_phyA_setting(struct seninf_ctx *ctx)
 			} else {
 				dev_info(ctx->dev, "[ERROR]data_rate %llu bps > 4.5G not support\n", data_rate);
 			}
-
+#endif
 		} else {
 			/* DPHY split mode */
 			SENINF_BITS(base, CDPHY_RX_ANA_0,

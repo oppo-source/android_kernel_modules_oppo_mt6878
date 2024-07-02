@@ -27,6 +27,10 @@
 #include "connv3_drv.h"
 #include "conn_adaptor.h"
 #include "conn_kern_adaptor.h"
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+//add for mtk connectivity power monitor
+#include <oplus_conn_event.h>
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 
 /*******************************************************************************
 *                         C O M P I L E R   F L A G S
@@ -551,6 +555,10 @@ static int conninfra_dev_init(void)
 	int cdevErr = -1;
 	int iret = 0;
 
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+	//add for mtk connectivity power monitor
+	oplusConnUeventInit();
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 	g_conn_adaptor_init_status = CONN_ADAPTOR_INIT_START;
 	init_waitqueue_head((wait_queue_head_t *)&g_conn_adaptor_init_wq);
 
@@ -658,6 +666,10 @@ static void conninfra_dev_deinit(void)
 	cdev_del(&g_conn_adaptor_cdev);
 	unregister_chrdev_region(dev, CONNINFRA_DEV_NUM);
 
+#ifdef OPLUS_FEATURE_CONN_POWER_MONITOR
+	//add for mtk connectivity power monitor
+	oplusConnUeventDeinit();
+#endif /* OPLUS_FEATURE_CONN_POWER_MONITOR */
 	pr_info("ConnInfra: ALPS platform init (%d)\n", iret);
 }
 

@@ -180,7 +180,9 @@ enum {
 #define IS_DIGITAL_PA_TYPE(type) \
 			(type == CHIP_TYPE_SIA9195 || \
 			 type == CHIP_TYPE_SIA9175 || \
-			 type == CHIP_TYPE_SIA9196)  \
+			 type == CHIP_TYPE_SIA9196 || \
+			 type == CHIP_TYPE_SIA9177 || \
+			 type == CHIP_TYPE_SIA917X) \
 			 ? true \
 			 : false
 
