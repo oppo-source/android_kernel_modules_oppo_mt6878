@@ -1,0 +1,23 @@
+#project    hardware_name     fake_name     des
+Nvwa_22113   IMX966           nvwamain      main cam
+Nvwa_22113   S5KJN1           nvwauwide     ultra wide cam
+Nvwa_22113   OV64B            nvwatele      tele cam
+Nvwa_22113   IMX709           nvwafront     front cam
+Nvwa_22113   IMX890           nvwasun2      main pre cam
+Nvwa_22113   IMX890           nvwaearth     tele pre cam
+Nvwa_22113   IMX882           nvwamars      ultra wide pre cam
+Nvwa_22113   IMX581           nvwamars2     ultra wide pre cam
+
+OmegaS2_23265   IMX882           omegas2main      main cam
+OmegaS2_23265   IMX355           omegas2wide      ultra wide cam
+OmegaS2_23265   S5KJN5           omegas2tele      tele cam
+OmegaS2_23265   S5KJN5           omegas2front     front cam
+
+OmegaS3_23261   IMX882           omegas3main      main cam
+OmegaS3_23261   IMX355           omegas3wide      ultra wide cam
+//OmegaS3_23261   OV02B10          omegas3macro     macro cam
+OmegaS3_23261   S5KJN5           omegas3front     front cam
+
+Casio_24678   IMX882           casiomain      main cam
+Casio_24678   IMX355           casiowide      ultra wide cam
+Casio_24678   S5K3P9           casiofront     front cam
