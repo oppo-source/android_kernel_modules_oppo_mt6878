@@ -1,0 +1,23 @@
+#project    hardware_name     fake_name     des
+OmegaS2_23265   IMX882           omegas2main      main cam
+OmegaS2_23265   IMX355           omegas2wide      ultra wide cam
+OmegaS2_23265   S5KJN5           omegas2tele      tele cam
+OmegaS2_23265   S5KJN5           omegas2front     front cam
+
+OmegaS3_23261   IMX882           omegas3main      main cam
+OmegaS3_23261   IMX355           omegas3wide      ultra wide cam
+//OmegaS3_23261   OV02B10          omegas3macro     macro cam
+OmegaS3_23261   S5KJN5           omegas3front     front cam
+
+AlphaH_24051    OV50D40          alphahmain       main cam
+AlphaH_24051    IMX471           alphahfront      front cam
+AlphaH_24051    GC02M1B          alphahmono       mono cam
+
+BaiKalM_24035    OV50D40         baikalmmain      main cam
+BaiKalM_24035    GC08A8          baikalmfront     front cam
+BaiKalM_24035    GC32E2          baikalmfront2    front2 cam
+BaikalM_24035    IMX471          baikalmfront3    front3 cam
+BaiKalM_24035    OV02B1B         baikalmmono      mono cam
+
+Greenland_25921 sc820cs        greenlandmain      main cam
+Greenland_25921 sc820cs        greenlandfront     front cam
