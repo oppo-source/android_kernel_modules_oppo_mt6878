@@ -1,0 +1,219 @@
+&spi3 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	nt36536@0 {
+		status = "okay";
+		compatible = "novatek,nf_nt36536";
+		reg = <0>;
+		chip-num = <1>;
+		chip-name = "NT36536";
+		spi-max-frequency = <19000000>;
+
+		/* Interrupt && Irq-gpio */
+		interrupt-parent = <&pio>;
+		interrupts = <7  0x2002>;
+
+		/* Other HW Resource */
+		irq-gpio = <&pio 7 0x2002>;
+		reset-gpio = <&pio 6 0x00>;
+
+		pinctrl-names = "default", "pin_cs_high","pin_cs_low";
+		pinctrl-0 = <&oplus_tp_spi_default>;
+		pinctrl-1 = <&oplus_tp_cs_active>;
+		pinctrl-2 = <&oplus_tp_cs_suspend &oplus_tp_int_suspend>;
+
+		touchpanel,irq_need_dev_resume_time = <500>;
+		touchpanel,max-num-support = <10>;
+		touchpanel,tx-rx-num = <56 40>;
+		touchpanel,panel-coords = <19800 28000>;
+		touchpanel,display-coords = <1980 2800>;
+		touchpanel,touchmajor-limit = <0 56>;
+		touchpanel,single-optimized-time = <8>;
+		touchpanel,pen-tx-rx-num = <12 8>;
+		touchpanel,doze-tx-num = <12>;
+		touchpanel,pen-panel-coords = <19800 28000>;
+		touchpanel,pen-max-pressure = <16384>;
+		touchpanel,pen-max-tilt = <60 60>;
+		touchpanel,msecs-to-jiffies-time = <100>;
+		touchpanel,smooth-level = <255 32 64 96 128 254>;
+		touchpanel,sensitive-level = <255 20 15 12 10 5>;
+		touchpanel,sensitive-level-charging = <255 30 20 15 12 7>;
+
+		panel_type = <15>;//HUAXING
+		firmware_name = "0xOPX25N1100";
+		platform_support_project = <25921 25925 25971 25972 25973 25974>;
+		platform_support_project_dir = <25921 25921 25921 25921 25921 25921>;
+		platform_support_project_commandline = "x25n11_p_d_a0024_vdo_panel";
+
+		prevention,curved_screen_V2;
+		prevention,grip_disable_level = <6>;
+		prevention,updelay_time_ms = <30>;
+		prevention,makeup_cnt_weight = <5 1 2 2 2>;
+		prevention,large_corner_range = <1200 3000>;
+		prevention,large_corner_judge_condition = <500 100 1000 7 7>;
+		prevention,trx_reject_condition = <9 7 7>;
+		prevention,trx_strict_reject_condition = <8 6 6>;
+		prevention,large_judge_time_ms = <500 50 100>;
+		prevention,large_exit_condition = <8 8 2>;
+		prevention,single_channel_width = <320 320>;
+		prevention,normal_tap_condition = <10 350>;
+		prevention,long_edge_condition = <150 80 60 80>;
+		prevention,long_strict_edge_condition = <130 70>;
+		prevention,long_fingerhold_condition = <70 6 4 4>;
+		prevention,short_edge_condition = <150 80 60 80>;
+		prevention,short_strict_edge_condition = <130 70>;
+		prevention,large_strict_exit_condition = <4 4>;
+		prevention,top_corner_config = <500 1500 300>;
+		prevention,edge_swipe_config = <300 665>;
+
+		prevention,curved_screen_V4;
+		prevention,long_eliminate_point_type = <2 19800 8280 300 28000 300 1>;
+		prevention,long_fingerhold_condition2 = <650 2000 0 0>;
+		prevention,top_corner_config2 = <3 80 600 1500 0>;
+		prevention,hor_long_top_corner_config = <350 2270 0 0>;
+		prevention,top_middle_config = <19800 300 1000 1>;
+		prevention,corner_eliminate_point_type = <0 1380 2280 1>;
+		prevention,finger_hold_differ_size = <1 0 300 300>;
+		prevention,finger_hold_max_rx_exit_distance = <5 350 2300>;
+		prevention,max_rx_exit_distance = <1 5 150 350 2000>;
+		prevention,dynamic_finger_hold_exit_distance = <1 350 2300 450>;
+		prevention,large_corner_judge_condition_ime = <300 0 0 0 0>;
+
+		prevention,curved_screen_v4_3;
+		prevention,corner_point_edge_percent_thd = <900 1 25 32 1>;
+		prevention,corner_point_edge_percent_thd2 = <18 3 20 1400 0>;
+		prevention,point_stability_judgment_check = <2 2 10 0 0>;
+		prevention,point_corner_er_min_limit_check = <3 3 0 0 1>;
+		prevention,one_frame_down_check_support = <1>;
+		prevention,uniform_make_up_point_v2 = <10 2 45 5 1>;
+
+		prevention,touch_point_stability_check = <100 500 0 0 0>;
+		prevention,middle_bottom_long_press_check = <6 140 10 0 1>;
+		prevention,middle_bottom_small_press_check = <4 70 550 140 10>;
+		prevention,middle_bottom_exit_dis = <600 400 20 400 0>;
+		prevention,middle_bottom_yfsr_coupling_thd = <90 60 5 10 0>;
+
+		prevention,curved_screen_v4_5;
+		prevention,long_press_corner_point_edge_percent_thd = <1200 1600 1 1 28 33 200 1>;
+		prevention,center_down_corner_point_edge_percent_thd = <1400 1800 1 1 32 37 0 1>;
+		prevention,soon_meet_corner_point_edge_percent_thd = <1600 2000 1 1 35 40 2 1>;
+
+
+		incell_screen;
+		//iovcc_shutdown_support;
+		kernel_grip_support;
+		tx_rx_num_exchange_support;
+		black_gesture_support;
+		charger_pump_support;
+		esd_handle_support;
+		black_gesture_test_support;
+		game_switch_support;
+		aiunit_game_info_support;
+		game_enable_in_tddi_support;
+		noflash_support;
+		lcd_trigger_load_tp_fw_support;
+		smart_gesture_support;
+		pressure_report_support;
+		pen_support;
+		waterproof_support;
+		irq_need_dev_resume_ok;
+		fw_update_app_support;
+		health_monitor_support;
+		fw_update_in_probe_with_headfile;
+		black_gesture_indep_support;
+		report_rate_limit;
+		tp_scene_para_switch_support;
+		exception_upload_support;
+		input_timestamp_in_top_irq_support;
+		tp_data_record_support;
+
+		/*
+		*Virtual Key Config:
+		*1:touchpanel,button-type: <virtualkey_type  supportted_button-map>
+		*virtualkey_type:
+		*Type 1: using board_properties
+		*Type 2: using same IC (button zone&& touch zone are seprate)
+		*Type 3: using diffrent IC (button zone&& touch zone are seprate)
+		*Type 4: No need of virtual key process
+		*supportted_button-map:select|menu|home|back
+		*
+		*2:touchpanel,button-map
+		*type (X1,Y1)(X2,Y2)(X3,Y3)(Width_X,Hight_Y)--Only when button-type is 0
+		*/
+		touchpanel,button-type = <4>;
+		touchpanel.button-TRx = <0 0>;
+	};
+};
+#include "mediatek/oplus_tp_25921_firmware.dtsi"
+
+&pio {
+	oplus_tp_spi_default: tp_spi_default {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO68__FUNC_SPI3_CLK>,
+				<PINMUX_GPIO69__FUNC_SPI3_CSB>,
+				<PINMUX_GPIO70__FUNC_SPI3_MO>,
+				<PINMUX_GPIO71__FUNC_SPI3_MI>;
+			drive-strength = <4>;
+		};
+	};
+
+	oplus_tp_cs_active: tp_cs_active {
+		pins_cmd_dat {
+			pinmux = < PINMUX_GPIO69__FUNC_SPI3_CSB>;
+		};
+	};
+	oplus_tp_cs_suspend: tp_cs_suspend {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO69__FUNC_GPIO69>;
+			output-low;
+		};
+	};
+	oplus_tp_int_suspend: tp_int_suspend {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO7__FUNC_GPIO7>;
+			input-enable;
+			bias-pull-down;
+		};
+	};
+};
+
+&keypad {
+	keypad,volume-down = <&pio 31 0x00>;
+	pinctrl-names = "volume_down_as_int";
+	pinctrl-0 = <&volume_down_gpio_eint>;
+	status = "okay";
+};
+
+&pio {
+	volume_down_gpio_eint:volume_down@0{
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO31__FUNC_GPIO31>;
+			slew-rate = <0>;  /*direction 0:in, 1:out*/
+			input-enable;
+			bias-disable;
+		};
+	};
+};
+
+&odm {
+	kpd_volume_down:kpd_volume_down {
+		compatible = "mediatek, VOLUME_DOWN-eint";
+		interrupt-parent = <&pio>;
+		interrupts = <31 IRQ_TYPE_EDGE_FALLING 31 0>;
+		debounce = <32000>;
+		status = "okay";
+	};
+};
+
+&gpio_keys {
+	status = "disabled";
+};
+
+&soc {
+	devinfo_greenland {
+		compatible = "oplus-devinfo";
+		without-hw-match;
+	};
+};

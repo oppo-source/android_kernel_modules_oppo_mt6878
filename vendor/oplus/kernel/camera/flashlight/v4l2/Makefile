@@ -1,0 +1,13 @@
+ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/flashlight
+ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/include/
+ccflags-y += -I$(DEVICE_MODULES_PATH)/drivers/misc/mediatek/pwm/pwm_v1/include/
+oplus_camera_aw36515-objs += aw36515.o
+obj-m += oplus_camera_aw36515.o
+oplus_camera_aw36515_omegas2-objs += aw36515_omegas2.o
+obj-m += oplus_camera_aw36515_omegas2.o
+oplus_camera_aw36515_omegas3-objs += aw36515_omegas3.o
+obj-m += oplus_camera_aw36515_omegas3.o
+oplus_camera_sy7806e_alphah-objs += sy7806e_alphah.o
+obj-m += oplus_camera_sy7806e_alphah.o
+oplus_camera_sy7806e_baikalm-objs += sy7806e_baikalm.o
+obj-m += oplus_camera_sy7806e_baikalm.o

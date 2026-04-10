@@ -1,0 +1,8 @@
+// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+/*
+ * Copyright (C) 2022 MediaTek Inc.
+ */
+/dts-v1/;
+/plugin/;
+
+/*End of this file, DO NOT ADD ANYTHING HERE*/
