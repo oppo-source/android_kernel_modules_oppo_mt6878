@@ -83,4 +83,7 @@ int iris_driver_ops_init_i5(void);
 void iris_abyp_power_down(void);
 void iris_reset_mipi(void);
 void iris_set_mipi_hopping_status(int enable);
+void iris_set_panel_backlight(uint32_t backlight_level);
+uint32_t iris_get_panel_backlight(void);
+void iris_aod_state_ops(struct iris_lightup_ops *lightup_ops);
 #endif // _PW_IRIS_API_H_

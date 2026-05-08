@@ -355,6 +355,12 @@ enum oplus_sub_btb_adc_index {
 	OPLUS_SUB_BTB_MAX,
 };
 
+#if IS_ENABLED(CONFIG_HORAE_FLASH_LED_THERMAL)
+struct oplus_ntc_switch {
+	bool ntc_switch_charge_ic;
+};
+#endif
+
 struct mtk_charger {
 #ifdef OPLUS_FEATURE_CHG_BASIC
 	struct oplus_chg_ic_dev *ic_dev;
@@ -369,6 +375,9 @@ struct mtk_charger {
 	int low_batt_otg_boost_curr_ua;
 	struct ntc_temp_parameters subboard_parameters;
 	struct temp_param *support_subboard_table;
+#if IS_ENABLED(CONFIG_HORAE_FLASH_LED_THERMAL)
+	struct oplus_ntc_switch ntc_switch_gpio;
+#endif /* CONFIG_HORAE_FLASH_LED_THERMAL */
 #endif
 
 	struct platform_device *pdev;
@@ -533,6 +542,7 @@ struct mtk_charger {
 	struct iio_channel	*usb_btb_temp_chan;
 	struct iio_channel	*master_cp_chan;
 	struct iio_channel	*slave_cp_chan;
+	struct iio_channel	*vbus_chan;
 
 #ifdef CONFIG_THERMAL
 	struct thermal_zone_device *master_cp_temp_tzd;
@@ -542,6 +552,9 @@ struct mtk_charger {
 	struct thermal_zone_device *subboard_temp_tzd;
 	struct thermal_zone_device *bat_btb_temp_tzd;
 	struct thermal_zone_device *bat_sub_btb_temp_tzd;
+#if IS_ENABLED(CONFIG_HORAE_FLASH_LED_THERMAL)
+	struct thermal_zone_device *charger_ic_temp_tzd;
+#endif
 #endif
 
 	int ccdetect_gpio;

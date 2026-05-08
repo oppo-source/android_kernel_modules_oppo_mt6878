@@ -1291,17 +1291,17 @@ static struct mml_tile_cache *task_get_tile_cache(struct mml_task *task, u32 pip
 static void kt_setsched(void *adaptor_ctx)
 {
 	struct mml_drm_ctx *ctx = adaptor_ctx;
-	struct sched_param kt_param = { .sched_priority = MAX_RT_PRIO - 1 };
+	struct sched_param kt_param = { .sched_priority = 1 };
 	int ret[3] = {0};
 
 	if (ctx->kt_priority)
 		return;
 
-	ret[0] = sched_setscheduler(ctx->kt_done_task, SCHED_FIFO, &kt_param);
+	ret[0] = sched_setscheduler(ctx->kt_done_task, SCHED_RR, &kt_param);
 	if (ctx->kt_config[0])
-		ret[1] = sched_setscheduler(ctx->kt_config[0]->task, SCHED_FIFO, &kt_param);
+		ret[1] = sched_setscheduler(ctx->kt_config[0]->task, SCHED_RR, &kt_param);
 	if (ctx->kt_config[1])
-		ret[2] = sched_setscheduler(ctx->kt_config[1]->task, SCHED_FIFO, &kt_param);
+		ret[2] = sched_setscheduler(ctx->kt_config[1]->task, SCHED_RR, &kt_param);
 	mml_log("[adpt]%s set kt done priority %d ret %d %d %d",
 		__func__, kt_param.sched_priority, ret[0], ret[1], ret[2]);
 	ctx->kt_priority = true;
@@ -1364,13 +1364,14 @@ static const struct mml_config_ops drm_config_ops = {
 int mml_ctx_init(struct mml_drm_ctx *ctx, const char * const threads[])
 {
 	/* create taskdone kthread first cause it is more easy for fail case */
-	ctx->kt_done = kthread_create_worker(0, "%s", threads[0]);
-	if (IS_ERR_OR_NULL(ctx->kt_done)) {
-		mml_err("[adpt]fail to create kthread worker %d",
-			(s32)PTR_ERR(ctx->kt_done));
-		ctx->kt_done = NULL;
-		goto err;
-
+	if (threads[0]) {
+		ctx->kt_done = kthread_create_worker(0, "%s", threads[0]);
+		if (IS_ERR(ctx->kt_done)) {
+			mml_err("[adpt]fail to create kthread worker %d",
+				(s32)PTR_ERR(ctx->kt_done));
+			ctx->kt_done = NULL;
+			goto err;
+		}
 	}
 	ctx->kt_done_task = ctx->kt_done->task;
 	ctx->wq_destroy = alloc_ordered_workqueue("%s", 0, threads[1]);
@@ -1403,7 +1404,7 @@ int mml_ctx_init(struct mml_drm_ctx *ctx, const char * const threads[])
 	return 0;
 
 err:
-	if (ctx->kt_done) {
+	if (threads[0] && ctx->kt_done) {
 		kthread_destroy_worker(ctx->kt_done);
 		ctx->kt_done = NULL;
 	}
@@ -1411,11 +1412,11 @@ err:
 		destroy_workqueue(ctx->wq_destroy);
 		ctx->wq_destroy = NULL;
 	}
-	if (ctx->kt_config[0]) {
+	if (threads[2] && ctx->kt_config[0]) {
 		kthread_destroy_worker(ctx->kt_config[0]);
 		ctx->kt_config[0] = NULL;
 	}
-	if (ctx->kt_config[1]) {
+	if (threads[3] && ctx->kt_config[1]) {
 		kthread_destroy_worker(ctx->kt_config[1]);
 		ctx->kt_config[1] = NULL;
 	}
@@ -1426,8 +1427,7 @@ static struct mml_drm_ctx *drm_ctx_create(struct mml_dev *mml,
 					  struct mml_drm_param *disp)
 {
 	static const char * const threads[] = {
-		"mml_drm_done", "mml_destroy",
-		"mml_work0", "mml_work1",
+		NULL, "mml_destroy", NULL, NULL,
 	};
 	struct mml_drm_ctx *ctx;
 	int ret;
@@ -1437,6 +1437,10 @@ static struct mml_drm_ctx *drm_ctx_create(struct mml_dev *mml,
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
 		return ERR_PTR(-ENOMEM);
+
+	ctx->kt_done = mml_dev_get_kt_worker(mml, mml_kt_taskdone);
+	ctx->kt_config[0] = mml_dev_get_kt_worker(mml, mml_kt_config0);
+	ctx->kt_config[1] = mml_dev_get_kt_worker(mml, mml_kt_config1);
 
 	ret = mml_ctx_init(ctx, threads);
 	if (ret) {
@@ -1519,6 +1523,11 @@ static void drm_ctx_release(struct mml_drm_ctx *ctx)
 
 	mml_msg("[drm]%s on ctx %p", __func__, ctx);
 
+	/* clear kthread from mml driver to avoid deinit */
+	ctx->kt_done = NULL;
+	ctx->kt_config[0] = NULL;
+	ctx->kt_config[1] = NULL;
+
 	INIT_LIST_HEAD(&local_list);
 
 	/* clone list_head first to aviod circular lock */
@@ -1532,10 +1541,24 @@ static void drm_ctx_release(struct mml_drm_ctx *ctx)
 		frame_config_queue_destroy(cfg);
 	}
 
-	destroy_workqueue(ctx->wq_destroy);
-	kthread_destroy_worker(ctx->kt_config[0]);
-	kthread_destroy_worker(ctx->kt_config[1]);
-	kthread_destroy_worker(ctx->kt_done);
+	mml_msg("[adpt]%s destroy_workqueue %p on ctx %p", __func__, ctx->wq_destroy, ctx);
+	if (ctx->wq_destroy) {
+		destroy_workqueue(ctx->wq_destroy);
+		ctx->wq_destroy = NULL;
+	}
+	if (ctx->kt_config[0]) {
+		kthread_destroy_worker(ctx->kt_config[0]);
+		ctx->kt_config[0] = NULL;
+	}
+	if (ctx->kt_config[1]) {
+		kthread_destroy_worker(ctx->kt_config[1]);
+		ctx->kt_config[1] = NULL;
+	}
+	if (ctx->kt_done) {
+		kthread_destroy_worker(ctx->kt_done);
+		ctx->kt_done = NULL;
+	}
+
 #ifndef MML_FPGA
 	mtk_sync_timeline_destroy(ctx->timeline);
 #endif

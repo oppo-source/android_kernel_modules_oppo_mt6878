@@ -36,7 +36,7 @@
 #include <linux/version.h>
 
 
-#define SIPA_DRIVER_VERSION					("3.1.0e-0916")
+#define SIPA_DRIVER_VERSION					("3.1.0e-1111")
 #define SIPA_MAX_CHANNEL_SUPPORT			(8)
 
 struct sipa_err {
@@ -214,6 +214,11 @@ enum {
 			 type == CHIP_TYPE_SIA8157)    \
 			 ? true \
 			 : false
+
+#define IS_SIPA_RST_KEEP_HIGH(type) \
+	((type == CHIP_TYPE_SIA8168  )  \
+	 ? true \
+	 : false)
 
 #define SIPA_MAX_REG_ADDR					(0xFF)
 

@@ -2286,6 +2286,10 @@ static int oplus_ofp_set_lhbm_pressed_icon(struct drm_panel *panel, void *dsi,
 			reg_count = sizeof(lhbm_pressed_icon_on_cmd_dv2) / sizeof(struct LCM_setting_table);
 			lhbm_pressed_icon_cmd = lhbm_pressed_icon_on_cmd_dv2;
 			OFP_INFO("LHBM DV2 ON\n");
+		} else if (get_panel_es_ver() == ES_DV3) {
+			reg_count = sizeof(lhbm_pressed_icon_on_cmd_dv3) / sizeof(struct LCM_setting_table);
+			lhbm_pressed_icon_cmd = lhbm_pressed_icon_on_cmd_dv3;
+			OFP_INFO("LHBM DV3 ON\n");
 		} else {
 			reg_count = sizeof(lhbm_pressed_icon_on_cmd) / sizeof(struct LCM_setting_table);
 			lhbm_pressed_icon_cmd = lhbm_pressed_icon_on_cmd;

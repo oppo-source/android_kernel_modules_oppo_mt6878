@@ -470,28 +470,6 @@ config DRM_PANEL_AE037_P_3_A0026_DSI_VDO
 	  and uses 24-bits RGB per pixel. It provides a MIPI DSI
 	  interface to host.
 
-config DRM_AE174_P_1_A0037_CMD_PANEL
-        tristate "oplus FHD DPHY cmd mode panel"
-        depends on OF
-        depends on DRM_MIPI_DSI
-        depends on BACKLIGHT_CLASS_DEVICE
-        help
-          Say Y here if you want to enable support for SDC NT37708S
-          DPHY CMD mode Full HD Plus 144HZ panel. The panel has a 1272x2772
-          resolution and uses 30-bits RGB per pixel. It provides a
-          MIPI DSI interface to host.
-
-config DRM_PANEL_AC382_P_3_A0034_VDO_PANEL
-	tristate "oplus FHD DPHY vdo mode panel"
-	depends on OF
-	depends on DRM_MIPI_DSI
-	depends on BACKLIGHT_CLASS_DEVICE
-	help
-	  Say Y here if you want to enable support for BOE ILI97605A
-	  DPHY VDO mode Full HD Plus 120HZ panel. The panel has a 1272x2772
-	  resolution and uses 30-bits RGB per pixel. It provides a
-	  MIPI DSI interface to host.
-
 config DRM_OPLUS24780_NT37706A_FHDP_DSI_VDO_144HZ_DPHY_BOE
         tristate "oplus FHD DPHY cmd mode panel"
         depends on OF
@@ -533,17 +511,6 @@ config DRM_OPLUS25680_TD4376B_FHDP_HX_DSI_VDO
         help
           Say Y here if you want to enable support for BOE TD4376B
           DPHY CMD mode Full HD Plus 120HZ panel. The panel has a 1080x2400
-          resolution and uses 30-bits RGB per pixel. It provides a
-          MIPI DSI interface to host.
-
-config DRM_OPLUS25711_NT37706A_FHDP_DSI_VDO_144HZ_DPHY_BOE
-        tristate "oplus FHD DPHY cmd mode panel"
-        depends on OF
-        depends on DRM_MIPI_DSI
-        depends on BACKLIGHT_CLASS_DEVICE
-        help
-          Say Y here if you want to enable support for BOE NT37703A
-          DPHY CMD mode Full HD Plus 120HZ panel. The panel has a 1280x2800
           resolution and uses 30-bits RGB per pixel. It provides a
           MIPI DSI interface to host.
 

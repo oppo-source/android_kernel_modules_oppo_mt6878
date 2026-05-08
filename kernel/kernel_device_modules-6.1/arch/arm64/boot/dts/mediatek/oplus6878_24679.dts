@@ -9,6 +9,10 @@
 #include <dt-bindings/phy/phy.h>
 #include <dt-bindings/pinctrl/mt6878-pinfunc.h>
 
+&disp_aal0 {
+    oplus_open_dre = <1>;
+};
+
 &odm {
     /*OPLUS_FEATURE_OEM_OCDT oppo project start */
 	oplus_project:oplus_project {

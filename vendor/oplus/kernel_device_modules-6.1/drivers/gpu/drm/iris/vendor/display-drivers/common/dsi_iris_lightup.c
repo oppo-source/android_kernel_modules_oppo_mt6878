@@ -676,7 +676,7 @@ int iris_lightup(void)
 	IRIS_LOGI("%s(), start +++, cmd list index: %u",
 			__func__,
 			iris_get_cmd_list_index());
-
+	mutex_lock(&pcfg->fw_parse_cmd_lock);
 	ktime0 = ktime_get();
 	_iris_pre_lightup();
 	_iris_load_mcu();
@@ -692,7 +692,7 @@ int iris_lightup(void)
 		iris_update_gamma();
 		iris_ioinc_filter_ratio_send();
 	}
-
+	mutex_unlock(&pcfg->fw_parse_cmd_lock);
 
 	ktime1 = ktime_get();
 	if (type == IRIS_CONT_SPLASH_LK)
@@ -1509,6 +1509,7 @@ void iris_prepare(void)
 				if (pcfg->iris_chip_type == CHIP_IRIS7)
 					iris_disable_temp_sensor();
 				iris_sleep_abyp_power_down();
+				return;
 			}
 
 			iris_send_cont_splash();

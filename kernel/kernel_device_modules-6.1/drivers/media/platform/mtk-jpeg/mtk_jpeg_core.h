@@ -165,6 +165,16 @@ struct mtk_jpeg_q_data {
 	struct v4l2_rect enc_crop_rect;
 };
 
+struct jpeg_mem_obj {
+	u32 len;
+	u64 iova;
+	u64 pa;
+	u64 va;
+	struct dma_buf_attachment *buf_att;
+	struct sg_table *sgt;
+	void  *map_va;
+};
+
 /**
  * mtk_jpeg_ctx - the device context data
  * @jpeg:		JPEG IP device for this context
@@ -188,6 +198,8 @@ struct mtk_jpeg_ctx {
 	u8 restart_interval;
 	struct v4l2_ctrl_handler ctrl_hdl;
 	u32 dst_offset;
+	u32 enable_q_table;
+	struct jpeg_mem_obj qtable;
 };
 
 #endif /* _MTK_JPEG_CORE_H */

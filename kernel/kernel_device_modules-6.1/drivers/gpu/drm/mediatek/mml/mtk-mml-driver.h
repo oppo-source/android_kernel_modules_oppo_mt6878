@@ -44,6 +44,13 @@ enum mml_sram_mode {
 	mml_sram_mode_total
 };
 
+enum mml_kt {
+	mml_kt_taskdone,
+	mml_kt_config0,
+	mml_kt_config1,
+	mml_kt_total
+};
+
 /*
  * mml_qos_update_tput - scan throughputs in all path client and update the max one
  *
@@ -314,6 +321,7 @@ void mml_update_comp_status(u32 idx, u32 status);
 void mml_update_freq_status(u32 freq);
 void mml_update_pq_status(const void *pq);
 struct mml_swpm_func *mml_get_swpm_func(void);
+struct kthread_worker *mml_dev_get_kt_worker(struct mml_dev *mml, enum mml_kt kt_id);
 
 struct mml_swpm_func {
 	bool set_func; /* Function set by swpm or not */

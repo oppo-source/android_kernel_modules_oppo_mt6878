@@ -1097,7 +1097,7 @@ static int rt1711_is_low_power_mode(struct tcpc_device *tcpc)
 		return rv;
 
 
-	if (chip->chip_id == HUSB311_DID || chip->chip_id == CPS8851_DID) {
+	if (chip->chip_id == HUSB311_DID || chip->chip_pid == CPS8851_PID) {
 		pr_info("%s - read HUSB311_REG_BMC_CTRL=0x%x\n", __func__, rv);
 		return (rv & RT1711H_REG_BMCIO_OSC_EN) != 0;
 	}
@@ -1131,7 +1131,7 @@ static int rt1711_set_low_power_mode(
 			RT1711H_REG_VBUS_DET_EN | RT1711H_REG_BMCIO_OSC_EN;
 	}
 
-	if (chip->chip_id == HUSB311_DID || chip->chip_id == CPS8851_DID) {
+	if (chip->chip_id == HUSB311_DID || chip->chip_pid == CPS8851_PID) {
 		data &= ~RT1711H_REG_BMCIO_OSC_EN;
 		pr_info("%s - write HUSB311_REG_BMC_CTRL=0x%x\n",
 			__func__, data);
@@ -1190,7 +1190,7 @@ static int rt1711_tcpc_deinit(struct tcpc_device *tcpc)
 	rt1711_set_cc(tcpc, TYPEC_CC_DRP);
 	rt1711_set_cc(tcpc, TYPEC_CC_OPEN);
 
-	if (chip->chip_id == HUSB311_DID || chip->chip_id == CPS8851_DID) {
+	if (chip->chip_id == HUSB311_DID || chip->chip_pid == CPS8851_PID) {
 		rt1711_i2c_write8(tcpc, RT1711H_REG_I2CRST_CTRL, 0x08);
 	} else {
 		rt1711_i2c_write8(tcpc, RT1711H_REG_I2CRST_CTRL, RT1711H_REG_I2CRST_SET(true, 4));
@@ -1549,11 +1549,11 @@ static int rt1711_tcpcdev_init(struct rt1711_chip *chip, struct device *dev)
 	chip->tcpc->tcpc_flags = TCPC_FLAGS_LPM_WAKEUP_WATCHDOG |
 			TCPC_FLAGS_VCONN_SAFE5V_ONLY;
 
-	if ((chip->chip_id > RT1711H_DID_B) || (chip->chip_id == CPS8851_DID))
+	if ((chip->chip_id > RT1711H_DID_B) || (chip->chip_pid == CPS8851_PID))
 		chip->tcpc->tcpc_flags |= TCPC_FLAGS_CHECK_RA_DETACH;
 
 #ifdef CONFIG_USB_PD_RETRY_CRC_DISCARD
-	if ((chip->chip_id > RT1715_DID_D) || (chip->chip_id == CPS8851_DID))
+	if ((chip->chip_id > RT1715_DID_D) || (chip->chip_pid == CPS8851_PID))
 		chip->tcpc->tcpc_flags |= TCPC_FLAGS_RETRY_CRC_DISCARD;
 #endif  /* CONFIG_USB_PD_RETRY_CRC_DISCARD */
 

@@ -962,23 +962,6 @@ static void mtk_dp_intf_config(struct mtk_ddp_comp *comp,
 	mtk_ddp_write_relaxed(comp, dp_intf->driver_data->np_sel,
 			DP_SW_NP_SEL, handle);
 
-	mtk_ddp_write_relaxed(comp, 5225,
-			DP_BUF_SODI_HIGH, handle);
-	mtk_ddp_write_relaxed(comp, 3899,
-			DP_BUF_SODI_LOW, handle);
-	mtk_ddp_write_relaxed(comp, 3620,
-			DP_BUF_PREULTRA_HIGH, handle);
-	mtk_ddp_write_relaxed(comp, 3481,
-			DP_BUF_PREULTRA_LOW, handle);
-	mtk_ddp_write_relaxed(comp, 3481,
-			DP_BUF_ULTRA_HIGH, handle);
-	mtk_ddp_write_relaxed(comp, 3203,
-			DP_BUF_ULTRA_LOW, handle);
-	mtk_ddp_write_relaxed(comp, 1671,
-			DP_BUF_URGENT_HIGH, handle);
-	mtk_ddp_write_relaxed(comp, 1532,
-			DP_BUF_URGENT_LOW, handle);
-
 	DPTXMSG("%s config done\n",
 			mtk_dump_comp_str(comp));
 

@@ -997,6 +997,13 @@ unsigned int ux_task_exec_limit(struct task_struct *p)
 		return exec_limit;
 	}
 
+#if IS_ENABLED(CONFIG_OPLUS_FEATURE_PIPELINE)
+	if (oplus_lowend_platform_pipeline_task_ux(p)) {
+		exec_limit *= 40;
+		return exec_limit;
+	}
+#endif
+
 	exec_limit = ux_max_exec_time(ux_state);
 	return exec_limit;
 }

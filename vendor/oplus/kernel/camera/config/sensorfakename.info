@@ -28,21 +28,6 @@ BaiKalM_24035    GC32E2          baikalmfront2    front2 cam
 BaikalM_24035    IMX471          baikalmfront3    front3 cam
 BaiKalM_24035    OV02B1B         baikalmmono      mono cam
 
-CruiserH_25051    GC50F6          cruiserhmmain     main cam
-CruiserH_25051    IMX480          cruiserhfront     front cam
-CruiserH_25051    OV02B1B         cruiserhmono      mono cam
-CruiserH_25271    SC532HS         cruiserhmain2     main2 cam
-CruiserH_25271    GC50F6          cruiserhfront2    front2 cam
-CruiserH_25271    OV02B1B          cruiserhmono2    mono cam
-CruiserH_25271    GC08A8          cruiserhuwide     uwide cam
-
-LUXL5_25069    GC50F6          luxl5mmain     main cam
-LUXL5_25069    IMX480          luxl5front     front cam
-LUXL5_25069    OV02B1B         luxl5mono      mono cam
-LUXL5_25321    SC532HS         luxl5main2     main2 cam
-LUXL5_25321    GC50F6          luxl5front2    front2 cam
-LUXL5_25321    GC08A8          luxl5uwide     uwide cam
-
 MilkywayC1_24021   IMX890           milkywayc1main      main cam
 MilkywayC1_24021   OV08D            milkywayc1wide      ultra wide cam
 MilkywayC1_24021   S5KJN5           milkywayc1tele      tele cam

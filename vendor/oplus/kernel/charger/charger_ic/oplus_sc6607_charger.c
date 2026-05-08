@@ -2631,6 +2631,7 @@ static int sc6607_hk_irq_handle(struct sc6607 *chip)
 		chip->bc12.detect_ing = false;
 		mutex_unlock(&chip->bc12.running_lock);
 		chip->usb_connect_start = false;
+		chip->bc12_done = false;
 		chip->is_force_dpdm = false;
 		chip->soft_bc12_type = SC6607_VBUS_TYPE_NONE;
 		chip->chg_type = CHARGER_UNKNOWN;
@@ -6045,6 +6046,10 @@ struct tsbus_charger_temp {
 	struct thermal_zone_device *tzd;
 };
 
+struct tsbat_charger_temp {
+	struct thermal_zone_device *tzd_tsbat;
+};
+
 static int sc6607_voocphy_get_tsbus_temp(struct thermal_zone_device *tz,
 		int *temp)
 {
@@ -6057,8 +6062,24 @@ static int sc6607_voocphy_get_tsbus_temp(struct thermal_zone_device *tz,
 	return 0;
 }
 
+static int sc6607_voocphy_get_tsbat_temp(struct thermal_zone_device *tz,
+		int *temp)
+{
+	struct tsbat_charger_temp *hst;
+	if (!temp || !tz)
+		return -EINVAL;
+	hst = tz->devdata;
+	*temp = sc6607_voocphy_get_tsbat();
+
+	return 0;
+}
+
 static struct thermal_zone_device_ops charger_temp_ops = {
 	.get_temp = sc6607_voocphy_get_tsbus_temp,
+};
+
+static struct thermal_zone_device_ops charger_temp_tsbat_ops = {
+	.get_temp = sc6607_voocphy_get_tsbat_temp,
 };
 
 static int register_charger_thermal(struct sc6607 *info)
@@ -6075,6 +6096,22 @@ static int register_charger_thermal(struct sc6607 *info)
 #endif
 	if (IS_ERR(tz_dev)) {
 		chg_err("charger_temp register fail");
+		ret = -ENODEV;
+	}
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))
+	ret = thermal_zone_device_enable(tz_dev);
+	if (ret)
+		thermal_zone_device_unregister(tz_dev);
+#endif
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 6, 0))
+	tz_dev = thermal_tripless_zone_device_register("charger_temp_tsbat",
+					NULL, &charger_temp_tsbat_ops, NULL);
+#else
+	tz_dev = thermal_zone_device_register("charger_temp_tsbat",
+					0, 0, NULL, &charger_temp_tsbat_ops, NULL, 0, 0);
+#endif
+	if (IS_ERR(tz_dev)) {
+		chg_err("charger_temp_tsbat register fail");
 		ret = -ENODEV;
 	}
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0))

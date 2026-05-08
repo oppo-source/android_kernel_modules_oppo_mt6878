@@ -169,7 +169,7 @@ static int _iris_configure(u32 display, u32 type, u32 value)
 			 * updating firmware
 			 */
 			//u8 firmware_status = iris_get_fw_load_status();
-
+			mutex_lock(&pcfg->fw_parse_cmd_lock);
 			iris_free_ipopt_buf(IRIS_LUT_PIP_IDX);
 			iris_parse_lut_cmds(value);
 			//if (firmware_status == FIRMWARE_LOAD_FAIL) {
@@ -183,6 +183,7 @@ static int _iris_configure(u32 display, u32 type, u32 value)
 				}
 				iris_update_fw_load_status(FIRMWARE_IN_USING);
 			}
+			mutex_unlock(&pcfg->fw_parse_cmd_lock);
 		}
 		break;
 	case IRIS_DBG_KERNEL_LOG_LEVEL:
@@ -350,7 +351,11 @@ int iris_configure_i7p(u32 display, u32 type, u32 value)
 		if (IRIS_IF_LOGI())
 			ktime = ktime_get();
 		iris_ioctl_lock();
+		if (pcfg->rx_mode == IRIS_CMD_MODE)
+			pcfg->lightup_ops.acquire_panel_lock();
 		rc = _iris_configure(display, type, value);
+		if (pcfg->rx_mode == IRIS_CMD_MODE)
+			pcfg->lightup_ops.release_panel_lock();
 		iris_ioctl_unlock();
 		if (IRIS_IF_LOGI())
 			IRIS_LOGI("%s(), spend %u us for type 0x%04x(%u) value %#x(%u)",

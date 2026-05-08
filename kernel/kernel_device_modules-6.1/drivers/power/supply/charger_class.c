@@ -820,6 +820,15 @@ int charger_dev_set_boost_voltage_limit(struct charger_device *chg_dev, u32 uv)
 	return -EOPNOTSUPP;
 }
 EXPORT_SYMBOL(charger_dev_set_boost_voltage_limit);
+
+int charger_dev_set_pr_swap_state(struct charger_device *chg_dev, bool state)
+{
+	if (chg_dev != NULL && chg_dev->ops != NULL && chg_dev->ops->set_pr_swap_state)
+		return chg_dev->ops->set_pr_swap_state(chg_dev, state);
+
+	return -EOPNOTSUPP;
+}
+EXPORT_SYMBOL(charger_dev_set_pr_swap_state);
 #endif
 
 int charger_dev_set_property(struct charger_device *charger_dev,

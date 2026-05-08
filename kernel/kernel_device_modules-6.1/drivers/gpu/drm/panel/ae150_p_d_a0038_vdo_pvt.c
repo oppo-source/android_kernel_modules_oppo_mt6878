@@ -129,9 +129,9 @@ static inline struct lcm *panel_to_lcm(struct drm_panel *panel)
 	return container_of(panel, struct lcm, panel);
 }
 
-
-#define MAX_NORMAL_BRIGHTNESS			1884
-#define MAX_HW_BRIGHTNESS			2047
+#define NORMAL_BRIGHTNESS            1024
+#define MAX_NORMAL_BRIGHTNESS        1884
+#define MAX_HW_BRIGHTNESS            2047
 static bool ktz8868_set_bl_flag = false;
 unsigned int level_backup = 0;
 #if IS_ENABLED(CONFIG_TOUCHPANEL_NOTIFY)
@@ -139,6 +139,7 @@ extern int (*tp_gesture_enable_notifier)(unsigned int tp_index);
 #endif
 static bool is_pd_with_guesture = false;
 extern unsigned long esd_flag;
+static bool hbm_flag = false;
 extern bool g_shutdown;
 extern unsigned int oplus_display_brightness;
 extern unsigned int oplus_max_normal_brightness;
@@ -1257,6 +1258,7 @@ static int lcm_panel_poweroff(struct drm_panel *panel)
 	return ret;
 }
 
+#define CABC_MODE_CMD_SIZE 5
 static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 	void *handle, unsigned int level)
 {
@@ -1265,6 +1267,8 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 	unsigned char cabc_brightness_lvl[] = {0x51, 0x07, 0xff};
 	unsigned char cabc_open[] = {0x53, 0x2C};
 	unsigned char cabc_close[] = {0x53, 0x00};
+	unsigned char cabc_mode_disable_hbm[] = {0x55, 0x00};
+	unsigned char cabc_mode_enable_hbm[] = {0x55, 0x02};
 
 	if (level > MAX_HW_BRIGHTNESS)
 		bl_level = MAX_HW_BRIGHTNESS;
@@ -1276,9 +1280,23 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 	pr_info("[lcd_info]%s: bl_level:%d, mapping value = %d\n", __func__, bl_level, backlight_map[bl_level]);
 
 	if (get_boot_mode() == KERNEL_POWER_OFF_CHARGING_BOOT && bl_level > 0) {
-		bl_level = 1024;
+		bl_level = NORMAL_BRIGHTNESS;
 	}
 
+
+	if (bl_level > MAX_NORMAL_BRIGHTNESS) {
+		if (!hbm_flag) {
+			cb(dsi, handle, cabc_mode_disable_hbm, ARRAY_SIZE(cabc_mode_disable_hbm));
+			hbm_flag = true;
+			pr_info("[lcd_info]%s: Enter HBM mode, disable CABC, hbm_flag = %d\n", __func__, hbm_flag);
+		}
+	} else {
+		if (hbm_flag) {
+			cb(dsi, handle, cabc_mode_enable_hbm, ARRAY_SIZE(cabc_mode_enable_hbm));
+			hbm_flag = false;
+			pr_info("[lcd_info]%s: exit HBM mode, enable CABC, hbm_flag = %d\n", __func__, hbm_flag);
+		}
+	}
 
 	i2c_maped_level = backlight_map[bl_level];
 
@@ -1306,7 +1324,6 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb,
 	return 0;
 }
 
-#define CABC_MODE_CMD_SIZE 5
 static void cabc_mode_switch(void *dsi, dcs_write_gce cb,
 		void *handle, unsigned int cabc_mode)
 {
@@ -1323,11 +1340,11 @@ static void cabc_mode_switch(void *dsi, dcs_write_gce cb,
 	if (cabc_mode == 0) {
 		cabc_mode_para = 0;
 	} else if (cabc_mode == 1) {
-		cabc_mode_para = 1;
+		cabc_mode_para = 2;
 	} else if (cabc_mode == 2) {
 		cabc_mode_para = 2;
 	} else if (cabc_mode == 3) {
-		cabc_mode_para = 3;
+		cabc_mode_para = 2;
 	} else {
 		pr_info("[lcd_info]%s: cabc_mode=%d is not support, close cabc !\n", __func__, cabc_mode);
 		cabc_mode_para = 0;

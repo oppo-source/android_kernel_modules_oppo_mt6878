@@ -31,10 +31,6 @@ def define_oplus_local_modules():
         conditional_srcs = {
             "CONFIG_OPLUS_DDK_MTK" : {
                 True: [
-                    "linkpower_module/heartbeat_proxy/mediatek/heartbeat_proxy_mtk.c",
-                    "linkpower_module/heartbeat_proxy/mediatek/mipc_hashmap.c",
-                    "linkpower_module/heartbeat_proxy/mediatek/mipc_list.c",
-                    "linkpower_module/heartbeat_proxy/mediatek/mipc_msg.c",
                     "linkpower_module/ccci_wakeup_hook/ccci_wakeup_hook.c"
                 ],
                 False: [
@@ -50,7 +46,7 @@ def define_oplus_local_modules():
             "linkpower_module/sk_pid_hook/sk_pid_hook.c",
         ]),
         conditional_defines = {
-            "mtk": ["MTK_PLATFORM", "MTK_CCCI_DEVICES"],
+            "mtk": ["MTK_PLATFORM"],
             "qcom": ["QCOM_PLATFORM"],
         },
         includes = ["."],

@@ -65,10 +65,10 @@ struct lcm {
 	bool hbm_wait;
 	int error;
 };
-//static unsigned int temp_seed_mode = 0;
+static unsigned int temp_seed_mode = 0;
 extern unsigned int oplus_display_brightness;
 extern unsigned int oplus_max_normal_brightness;
-//extern unsigned long seed_mode;
+extern unsigned long seed_mode;
 static int current_fps = 120;
 static bool aod_state = false;
 static unsigned int lhbm_last_backlight = 0;
@@ -222,6 +222,11 @@ static void lcm_panel_init(struct lcm *ctx)
 	lcm_dcs_write_seq_static(ctx, 0xBA,0x24);
 	lcm_dcs_write_seq_static(ctx, 0xBC,0x54);
 	lcm_dcs_write_seq_static(ctx, 0xBD,0x23);
+
+	//AOD luminance notation
+	lcm_dcs_write_seq_static(ctx, 0xFF, 0x5A, 0xA5, 0x06);
+	lcm_dcs_write_seq_static(ctx, 0xB6, 0x09);
+	lcm_dcs_write_seq_static(ctx, 0xB7, 0x03);
 
 	lcm_dcs_write_seq_static(ctx, 0xFF,0x5A,0xA5,0x00);
 
@@ -1054,7 +1059,7 @@ static int lcm_setbacklight_cmdq(void *dsi, dcs_write_gce cb, void *handle, unsi
 */
 	return 0;
 }
-/*
+
 static int panel_set_seed(void *dsi, dcs_write_gce cb, void *handle, unsigned int mode)
 {
 	unsigned int i = 0;
@@ -1067,14 +1072,44 @@ static int panel_set_seed(void *dsi, dcs_write_gce cb, void *handle, unsigned in
 	temp_seed_mode = mode;
 
 	switch(mode) {
-		case NATURAL:
-			for(i = 0; i < sizeof(dsi_set_seed_natural)/sizeof(struct LCM_setting_table); i++) {
+	case NATURAL:
+			for (i = 0; i < sizeof(dsi_set_seed_natural)/sizeof(struct LCM_setting_table); i++) {
 				cb(dsi, handle, dsi_set_seed_natural[i].para_list, dsi_set_seed_natural[i].count);
 			}
 		break;
-		case EXPERT:
-			for(i = 0; i < sizeof(dsi_set_seed_expert)/sizeof(struct LCM_setting_table); i++) {
+	case EXPERT:
+			for (i = 0; i < sizeof(dsi_set_seed_expert)/sizeof(struct LCM_setting_table); i++) {
 				cb(dsi, handle, dsi_set_seed_expert[i].para_list, dsi_set_seed_expert[i].count);
+			}
+		break;
+	case UIR_ON_NATURAL:
+			for (i = 0; i < sizeof(dsi_set_uir_on_natural)/sizeof(struct LCM_setting_table); i++) {
+				cb(dsi, handle, dsi_set_uir_on_natural[i].para_list, dsi_set_uir_on_natural[i].count);
+			}
+		break;
+	case UIR_ON_EXPERT:
+			for (i = 0; i < sizeof(dsi_set_uir_on_expert)/sizeof(struct LCM_setting_table); i++) {
+				cb(dsi, handle, dsi_set_uir_on_expert[i].para_list, dsi_set_uir_on_expert[i].count);
+			}
+		break;
+	case UIR_OFF_NATURAL:
+			for (i = 0; i < sizeof(dsi_set_uir_off_natural)/sizeof(struct LCM_setting_table); i++) {
+				cb(dsi, handle, dsi_set_uir_off_natural[i].para_list, dsi_set_uir_off_natural[i].count);
+			}
+		break;
+	case UIR_OFF_EXPERT:
+			for (i = 0; i < sizeof(dsi_set_uir_off_expert)/sizeof(struct LCM_setting_table); i++) {
+				cb(dsi, handle, dsi_set_uir_off_expert[i].para_list, dsi_set_uir_off_expert[i].count);
+			}
+		break;
+	case UIR_DIM_ENABLE:
+			for (i = 0; i < sizeof(dsi_set_uir_dim_enable)/sizeof(struct LCM_setting_table); i++) {
+				cb(dsi, handle, dsi_set_uir_dim_enable[i].para_list, dsi_set_uir_dim_enable[i].count);
+			}
+		break;
+	case UIR_DIM_DISABLE:
+			for (i = 0; i < sizeof(dsi_set_uir_dim_disable)/sizeof(struct LCM_setting_table); i++) {
+				cb(dsi, handle, dsi_set_uir_dim_disable[i].para_list, dsi_set_uir_dim_disable[i].count);
 			}
 		break;
 		default:
@@ -1082,7 +1117,7 @@ static int panel_set_seed(void *dsi, dcs_write_gce cb, void *handle, unsigned in
 	}
 	return 0;
 }
-*/
+
 
 static int oplus_esd_backlight_recovery(void *dsi, dcs_write_gce cb, void *handle)
 {
@@ -1215,39 +1250,68 @@ static int panel_doze_disable(struct drm_panel *panel, void *dsi, dcs_write_gce 
 {
 	unsigned int i = 0;
 	unsigned int cmd;
+	unsigned int reg_count = 0;
+	int vrefresh_rate = 0;
+	struct lcm *ctx = NULL;
+	struct LCM_setting_table *aod_off_cmd = NULL;
 
 	if (!panel || !dsi) {
 		pr_err("Invalid dsi params\n");
 	}
 
-	for (i = 0; i < (sizeof(AOD_off_setting) / sizeof(struct LCM_setting_table)); i++) {
+	ctx = panel_to_lcm(panel);
+	if (!ctx) {
+		OFP_ERR("Invalid lcm params\n");
+	}
 
-		cmd = AOD_off_setting[i].cmd;
+	if (!ctx->m) {
+		vrefresh_rate = 120;
+		OFP_INFO("default refresh rate is 120hz\n");
+	} else {
+		vrefresh_rate = drm_mode_vrefresh(ctx->m);
+	}
+
+	if (vrefresh_rate == 60) {
+		aod_off_cmd = AOD_off_setting_60hz;
+		reg_count = sizeof(AOD_off_setting_60hz) / sizeof(struct LCM_setting_table);
+	} else if (vrefresh_rate == 90) {
+		aod_off_cmd = AOD_off_setting_90hz;
+		reg_count = sizeof(AOD_off_setting_90hz) / sizeof(struct LCM_setting_table);
+	} else if (vrefresh_rate == 120) {
+		aod_off_cmd = AOD_off_setting_120hz;
+		reg_count = sizeof(AOD_off_setting_120hz) / sizeof(struct LCM_setting_table);
+	} else if (vrefresh_rate == 144) {
+		aod_off_cmd = AOD_off_setting_144hz;
+		reg_count = sizeof(AOD_off_setting_144hz) / sizeof(struct LCM_setting_table);
+	}
+
+	for (i = 0; i < reg_count; i++) {
+		cmd = aod_off_cmd[i].cmd;
 		switch (cmd) {
 			case REGFLAG_DELAY:
 				if (handle == NULL) {
-					usleep_range(AOD_off_setting[i].count * 1000, AOD_off_setting[i].count * 1000 + 100);
+					usleep_range(aod_off_cmd[i].count * 1000, aod_off_cmd[i].count * 1000 + 100);
 				} else {
-					cmdq_pkt_sleep(handle, CMDQ_US_TO_TICK(AOD_off_setting[i].count * 1000), CMDQ_GPR_R14);
+					cmdq_pkt_sleep(handle, CMDQ_US_TO_TICK(aod_off_cmd[i].count * 1000), CMDQ_GPR_R14);
 				}
 				break;
 			case REGFLAG_UDELAY:
 				if (handle == NULL) {
-					usleep_range(AOD_off_setting[i].count, AOD_off_setting[i].count + 100);
+					usleep_range(aod_off_cmd[i].count, aod_off_cmd[i].count + 100);
 				} else {
-					cmdq_pkt_sleep(handle, CMDQ_US_TO_TICK(AOD_off_setting[i].count), CMDQ_GPR_R14);
+					cmdq_pkt_sleep(handle, CMDQ_US_TO_TICK(aod_off_cmd[i].count), CMDQ_GPR_R14);
 				}
 				break;
 			case REGFLAG_END_OF_TABLE:
 				break;
 			default:
-				cb(dsi, handle, AOD_off_setting[i].para_list, AOD_off_setting[i].count);
+				cb(dsi, handle, aod_off_cmd[i].para_list, aod_off_cmd[i].count);
 		}
 	}
 	aod_state = false;
-	//if (temp_seed_mode)
-		//panel_set_seed(dsi, cb, handle, temp_seed_mode);
-	pr_info("%s:success\n", __func__);
+	if (temp_seed_mode)
+		panel_set_seed(dsi, cb, handle, temp_seed_mode);
+	OFP_INFO("%s:success\n", __func__);
 	return 0;
 }
 
@@ -1289,7 +1353,7 @@ static int panel_doze_enable(struct drm_panel *panel, void *dsi, dcs_write_gce c
 				}
 		}
 	}
-	pr_info("%s:success\n", __func__);
+	OFP_INFO("%s:success\n", __func__);
 	return 0;
 }
 
@@ -1319,42 +1383,104 @@ static struct vdo_aod_params vdo_aod_on = {
 	.change_mmclk = true,
 	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x00}},
 	.vdo_aod_cmd_table[1]={1, {0x39}},
-	.vdo_aod_cmd_table[2]={2, {0xD1,0x00}},
-	.vdo_aod_cmd_table[3]={4, {0xFF, 0x5A, 0xA5, 0x07}},
-	.vdo_aod_cmd_table[4]={2, {0xD4,0x93}},
-	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x00}},
-	.vdo_aod_cmd_table[6]={5, {0x51, 0x00,0x00, 0x0D,0xBB}},
+	.vdo_aod_cmd_table[2]={4, {0xFF, 0x5A, 0xA5, 0x07}},
+	.vdo_aod_cmd_table[3]={2, {0xD4, 0x93}},
+	.vdo_aod_cmd_table[4]={4, {0xFF, 0x5A, 0xA5, 0x22}},
+	.vdo_aod_cmd_table[5]={2, {0xDD, 0x02}},
+	.vdo_aod_cmd_table[6]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[7]={3, {0xFD, 0x00, 0x80}},
+	.vdo_aod_cmd_table[8]={3, {0x51, 0x0D, 0xBB}},
+	.vdo_aod_cmd_table[9]={3, {0xFD, 0x00, 0x00}},
 };
 
+static struct vdo_aod_params vdo_aod_to_144hz = {
+	.porch_change_flag = 0x03,
+	.dst_hfp = 100,
+	.dst_vfp = 80,
+	.mode_idx = 3,
+	.change_mmclk = true,
+	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x22}},
+	.vdo_aod_cmd_table[1]={2, {0xDD, 0x12}},
+	.vdo_aod_cmd_table[2]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[3]={1, {0x38}},
+	.vdo_aod_cmd_table[4]={2, {0xD0, 0x40}},
+	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[6]={2, {0x80, 0x01}},
+	.vdo_aod_cmd_table[7]={2, {0x81, 0x00}},
+	.vdo_aod_cmd_table[8]={2, {0x88, 0x78}},
+	.vdo_aod_cmd_table[9]={4, {0xFF, 0x5A, 0xA5, 0x07}},
+	.vdo_aod_cmd_table[10]={2, {0xD4, 0x90}},
+	.vdo_aod_cmd_table[11]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[12]={2, {0x8B, 0x78}},
+	.vdo_aod_cmd_table[13]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+};
+
+static struct vdo_aod_params vdo_aod_to_144hz_unlocking = {
+	.porch_change_flag = 0x03,
+	.dst_hfp = 100,
+	.dst_vfp = 80,
+	.mode_idx = 3,
+	.change_mmclk = true,
+	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x22}},
+	.vdo_aod_cmd_table[1]={2, {0xDD, 0x12}},
+	.vdo_aod_cmd_table[2]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[3]={1, {0x38}},
+	.vdo_aod_cmd_table[4]={2, {0xD0, 0x40}},
+	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[6]={2, {0x80, 0x01}},
+	.vdo_aod_cmd_table[7]={2, {0x81, 0x00}},
+	.vdo_aod_cmd_table[8]={2, {0x88, 0x78}},
+	.vdo_aod_cmd_table[9]={4, {0xFF, 0x5A, 0xA5, 0x07}},
+	.vdo_aod_cmd_table[10]={2, {0xD4, 0x90}},
+	.vdo_aod_cmd_table[11]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[12]={2, {0x8B, 0x78}},
+	.vdo_aod_cmd_table[13]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[14]={5, {0x51, 0x00, 0x00, 0x00, 0x00}},
+};
 
 static struct vdo_aod_params vdo_aod_to_120hz = {
 	.porch_change_flag = 0x03,
 	.dst_hfp = 114,
 	.dst_vfp = 80,
-	.mode_idx = 0,
+	.mode_idx = 2,
 	.change_mmclk = true,
-	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x00}},
-	.vdo_aod_cmd_table[1]={1, {0x38}},
-	.vdo_aod_cmd_table[2]={2, {0xD0,0x00}},
-	.vdo_aod_cmd_table[3]={4, {0xFF, 0x5A, 0xA5, 0x07}},
-	.vdo_aod_cmd_table[4]={2, {0xD4,0x90}},
-	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x00}},
-
+	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x22}},
+	.vdo_aod_cmd_table[1]={2, {0xDD, 0x12}},
+	.vdo_aod_cmd_table[2]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[3]={1, {0x38}},
+	.vdo_aod_cmd_table[4]={2, {0xD0, 0x00}},
+	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[6]={2, {0x80, 0x01}},
+	.vdo_aod_cmd_table[7]={2, {0x81, 0x00}},
+	.vdo_aod_cmd_table[8]={2, {0x88, 0x78}},
+	.vdo_aod_cmd_table[9]={4, {0xFF, 0x5A, 0xA5, 0x07}},
+	.vdo_aod_cmd_table[10]={2, {0xD4, 0x90}},
+	.vdo_aod_cmd_table[11]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[12]={2, {0x8B, 0x78}},
+	.vdo_aod_cmd_table[13]={4, {0xFF, 0x5A, 0xA5, 0x00}},
 };
 
 static struct vdo_aod_params vdo_aod_to_120hz_unlocking = {
 	.porch_change_flag = 0x03,
 	.dst_hfp = 114,
 	.dst_vfp = 80,
-	.mode_idx = 0,
+	.mode_idx = 2,
 	.change_mmclk = true,
-	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x00}},
-	.vdo_aod_cmd_table[1]={1, {0x38}},
-	.vdo_aod_cmd_table[2]={2, {0xD0,0x00}},
-	.vdo_aod_cmd_table[3]={4, {0xFF, 0x5A, 0xA5, 0x07}},
-	.vdo_aod_cmd_table[4]={2, {0xD4,0x90}},
-	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x00}},
-	.vdo_aod_cmd_table[6]={5, {0x51, 0x00, 0x00, 0x00, 0x00}},
+	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x22}},
+	.vdo_aod_cmd_table[1]={2, {0xDD, 0x12}},
+	.vdo_aod_cmd_table[2]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[3]={1, {0x38}},
+	.vdo_aod_cmd_table[4]={2, {0xD0, 0x00}},
+	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[6]={2, {0x80, 0x01}},
+	.vdo_aod_cmd_table[7]={2, {0x81, 0x00}},
+	.vdo_aod_cmd_table[8]={2, {0x88, 0x78}},
+	.vdo_aod_cmd_table[9]={4, {0xFF, 0x5A, 0xA5, 0x07}},
+	.vdo_aod_cmd_table[10]={2, {0xD4, 0x90}},
+	.vdo_aod_cmd_table[11]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[12]={2, {0x8B, 0x78}},
+	.vdo_aod_cmd_table[13]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[14]={5, {0x51, 0x00, 0x00, 0x00, 0x00}},
 };
 
 static struct vdo_aod_params vdo_aod_to_90hz = {
@@ -1363,13 +1489,20 @@ static struct vdo_aod_params vdo_aod_to_90hz = {
 	.dst_vfp = 980,
 	.mode_idx = 1,
 	.change_mmclk = true,
-	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x00}},
-	.vdo_aod_cmd_table[1]={1, {0x38}},
-	.vdo_aod_cmd_table[2]={2, {0xD0,0x10}},
-	.vdo_aod_cmd_table[3]={4, {0xFF, 0x5A, 0xA5, 0x07}},
-	.vdo_aod_cmd_table[4]={2, {0xD4,0x90}},
-	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x00}},
-
+	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x22}},
+	.vdo_aod_cmd_table[1]={2, {0xDD, 0x12}},
+	.vdo_aod_cmd_table[2]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[3]={1, {0x38}},
+	.vdo_aod_cmd_table[4]={2, {0xD0, 0x10}},
+	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[6]={2, {0x80, 0x01}},
+	.vdo_aod_cmd_table[7]={2, {0x81, 0x00}},
+	.vdo_aod_cmd_table[8]={2, {0x88, 0x78}},
+	.vdo_aod_cmd_table[9]={4, {0xFF, 0x5A, 0xA5, 0x07}},
+	.vdo_aod_cmd_table[10]={2, {0xD4, 0x90}},
+	.vdo_aod_cmd_table[11]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[12]={2, {0x8B, 0x78}},
+	.vdo_aod_cmd_table[13]={4, {0xFF, 0x5A, 0xA5, 0x00}},
 };
 
 static struct vdo_aod_params vdo_aod_to_90hz_unlocking = {
@@ -1378,43 +1511,66 @@ static struct vdo_aod_params vdo_aod_to_90hz_unlocking = {
 	.dst_vfp = 980,
 	.mode_idx = 1,
 	.change_mmclk = true,
-	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x00}},
-	.vdo_aod_cmd_table[1]={1, {0x38}},
-	.vdo_aod_cmd_table[2]={2, {0xD0,0x10}},
-	.vdo_aod_cmd_table[3]={4, {0xFF, 0x5A, 0xA5, 0x07}},
-	.vdo_aod_cmd_table[4]={2, {0xD4,0x90}},
-	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x00}},
-	.vdo_aod_cmd_table[6]={5, {0x51, 0x00, 0x00, 0x00, 0x00}},
-
+	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x22}},
+	.vdo_aod_cmd_table[1]={2, {0xDD, 0x12}},
+	.vdo_aod_cmd_table[2]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[3]={1, {0x38}},
+	.vdo_aod_cmd_table[4]={2, {0xD0, 0x10}},
+	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[6]={2, {0x80, 0x01}},
+	.vdo_aod_cmd_table[7]={2, {0x81, 0x00}},
+	.vdo_aod_cmd_table[8]={2, {0x88, 0x78}},
+	.vdo_aod_cmd_table[9]={4, {0xFF, 0x5A, 0xA5, 0x07}},
+	.vdo_aod_cmd_table[10]={2, {0xD4, 0x90}},
+	.vdo_aod_cmd_table[11]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[12]={2, {0x8B, 0x78}},
+	.vdo_aod_cmd_table[13]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[14]={5, {0x51, 0x00, 0x00, 0x00, 0x00}},
 };
 
 static struct vdo_aod_params vdo_aod_to_60hz = {
 	.porch_change_flag = 0x03,
 	.dst_hfp = 114,
 	.dst_vfp = 2960,
-	.mode_idx = 2,
+	.mode_idx = 0,
 	.change_mmclk = true,
-	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x00}},
-	.vdo_aod_cmd_table[1]={1, {0x38}},
-	.vdo_aod_cmd_table[2]={2, {0xD0,0x20}},
-	.vdo_aod_cmd_table[3]={4, {0xFF, 0x5A, 0xA5, 0x07}},
-	.vdo_aod_cmd_table[4]={2, {0xD4, 0x90}},
-	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x22}},
+	.vdo_aod_cmd_table[1]={2, {0xDD, 0x12}},
+	.vdo_aod_cmd_table[2]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[3]={1, {0x38}},
+	.vdo_aod_cmd_table[4]={2, {0xD0, 0x20}},
+	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[6]={2, {0x80, 0x01}},
+	.vdo_aod_cmd_table[7]={2, {0x81, 0x00}},
+	.vdo_aod_cmd_table[8]={2, {0x88, 0x78}},
+	.vdo_aod_cmd_table[9]={4, {0xFF, 0x5A, 0xA5, 0x07}},
+	.vdo_aod_cmd_table[10]={2, {0xD4, 0x90}},
+	.vdo_aod_cmd_table[11]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[12]={2, {0x8B, 0x78}},
+	.vdo_aod_cmd_table[13]={4, {0xFF, 0x5A, 0xA5, 0x00}},
 };
 
 static struct vdo_aod_params vdo_aod_to_60hz_unlocking = {
 	.porch_change_flag = 0x03,
 	.dst_hfp = 114,
 	.dst_vfp = 2960,
-	.mode_idx = 2,
+	.mode_idx = 0,
 	.change_mmclk = true,
-	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x00}},
-	.vdo_aod_cmd_table[1]={1, {0x38}},
-	.vdo_aod_cmd_table[2]={2, {0xD0,0x20}},
-	.vdo_aod_cmd_table[3]={4, {0xFF, 0x5A, 0xA5, 0x07}},
-	.vdo_aod_cmd_table[4]={2, {0xD4, 0x90}},
-	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x00}},
-	.vdo_aod_cmd_table[6]={5, {0x51, 0x00, 0x00, 0x00, 0x00}},
+	.vdo_aod_cmd_table[0]={4, {0xFF, 0x5A, 0xA5, 0x22}},
+	.vdo_aod_cmd_table[1]={2, {0xDD, 0x12}},
+	.vdo_aod_cmd_table[2]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[3]={1, {0x38}},
+	.vdo_aod_cmd_table[4]={2, {0xD0, 0x20}},
+	.vdo_aod_cmd_table[5]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[6]={2, {0x80, 0x01}},
+	.vdo_aod_cmd_table[7]={2, {0x81, 0x00}},
+	.vdo_aod_cmd_table[8]={2, {0x88, 0x78}},
+	.vdo_aod_cmd_table[9]={4, {0xFF, 0x5A, 0xA5, 0x07}},
+	.vdo_aod_cmd_table[10]={2, {0xD4, 0x90}},
+	.vdo_aod_cmd_table[11]={4, {0xFF, 0x5A, 0xA5, 0x4F}},
+	.vdo_aod_cmd_table[12]={2, {0x8B, 0x78}},
+	.vdo_aod_cmd_table[13]={4, {0xFF, 0x5A, 0xA5, 0x00}},
+	.vdo_aod_cmd_table[14]={5, {0x51, 0x00, 0x00, 0x00, 0x00}},
 };
 
 static int mtk_get_vdo_aod_param(int aod_en, struct vdo_aod_params **vdo_aod_param)
@@ -1425,24 +1581,31 @@ static int mtk_get_vdo_aod_param(int aod_en, struct vdo_aod_params **vdo_aod_par
 		mode_id_before_aod = current_fps;
 	} else {
 		if (mode_id_before_aod == 60) {
-			if (oplus_ofp_get_aod_unlocking())
+			if (oplus_ofp_get_aod_unlocking() && oplus_ofp_get_aod_state())
 				*vdo_aod_param = &vdo_aod_to_60hz_unlocking;
 			else {
 				*vdo_aod_param = &vdo_aod_to_60hz;
 				OFP_INFO("%s:before mode_id %d\n", __func__, mode_id_before_aod);
 			}
 		} else if (mode_id_before_aod == 90) {
-			if (oplus_ofp_get_aod_unlocking())
+			if (oplus_ofp_get_aod_unlocking() && oplus_ofp_get_aod_state())
 				*vdo_aod_param = &vdo_aod_to_90hz_unlocking;
 			else {
 				*vdo_aod_param = &vdo_aod_to_90hz;
 				OFP_INFO("%s:before mode_id %d\n", __func__, mode_id_before_aod);
 			}
-		} else {
-			if(oplus_ofp_get_aod_unlocking())
+		} else if (mode_id_before_aod == 120) {
+			if (oplus_ofp_get_aod_unlocking() && oplus_ofp_get_aod_state())
 				*vdo_aod_param = &vdo_aod_to_120hz_unlocking;
 			else {
 				*vdo_aod_param = &vdo_aod_to_120hz;
+				OFP_INFO("%s:before mode_id %d\n", __func__, mode_id_before_aod);
+			}
+		}  else {
+			if (oplus_ofp_get_aod_unlocking() && oplus_ofp_get_aod_state())
+				*vdo_aod_param = &vdo_aod_to_144hz_unlocking;
+			else {
+				*vdo_aod_param = &vdo_aod_to_144hz;
 				OFP_INFO("%s:before mode_id %d\n", __func__, mode_id_before_aod);
 			}
 		}
@@ -1700,7 +1863,7 @@ static struct mtk_panel_funcs ext_funcs = {
 	.hbm_set_state = panel_hbm_set_state,
 	.hbm_get_wait_state = panel_hbm_get_wait_state,
 	.hbm_set_wait_state = panel_hbm_set_wait_state,
-	//.set_seed = panel_set_seed,
+	.set_seed = panel_set_seed,
 	.get_vdo_aod_param = mtk_get_vdo_aod_param,
 
 };
@@ -1891,7 +2054,7 @@ static struct mipi_dsi_driver lcm_driver = {
 	.probe = lcm_probe,
 	.remove = lcm_remove,
 	.driver = {
-		.name = "ac382_P_3_a0034_vdo_panel",
+		.name = "ac382_p_3_a0034_vdo_panel",
 		.owner = THIS_MODULE,
 		.of_match_table = lcm_of_match,
 	},

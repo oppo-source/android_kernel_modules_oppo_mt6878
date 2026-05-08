@@ -188,7 +188,7 @@ static int wl2866d_init_voltage(struct i2c_client *i2c) {
                 dev_err(&i2c->dev, "init voltage failed!\n");
             }
         }
-    } else if (is_project(24626) || is_project(24780) || is_project(24781) || is_project(25677) || is_project(25680)) {
+    } else if (is_project(25680)) {
         for (i = 0; i < ARRAY_SIZE(wl2866d_DVDD2_1200mV_on_config); i++) {
             ret = wl2866d_i2c_write(wl2866d_i2c_client, wl2866d_DVDD2_1200mV_on_config[i].reg, wl2866d_DVDD2_1200mV_on_config[i].value);
             pr_err("reg(0x02) = 0x%x, reg(0x03) = 0x%x, reg(0x04) = 0x%x, reg(0x05) = 0x%x, reg(0x06) = 0x%x, reg(0x0E) = 0x%x\n", \
@@ -221,7 +221,7 @@ static int wl2866d_enable_reg(struct regulator_dev *rdev, unsigned char flag, bo
 
     if (is_project(25664)) {
         ret = wl2866d_i2c_read(wl2866d_i2c_client, wl2866d_DVDD2_1050mV_on_config[VOL_ENABLE].reg, &reg_val);
-    } else if (is_project(24626) || is_project(24780) || is_project(24781) || is_project(25677) || is_project(25680)) {
+    } else if (is_project(25680)) {
         ret = wl2866d_i2c_read(wl2866d_i2c_client, wl2866d_DVDD2_1200mV_on_config[VOL_ENABLE].reg, &reg_val);
     } else {
         ret = wl2866d_i2c_read(wl2866d_i2c_client, wl2866d_on_config[VOL_ENABLE].reg, &reg_val);
@@ -249,7 +249,7 @@ static int wl2866d_enable_reg(struct regulator_dev *rdev, unsigned char flag, bo
 
     if (is_project(25664)) {
         ret = wl2866d_i2c_write(wl2866d_i2c_client, wl2866d_DVDD2_1050mV_on_config[VOL_ENABLE].reg, reg_val);
-    } else if (is_project(24626) || is_project(24780) || is_project(24781) || is_project(25677) || is_project(25680)) {
+    } else if (is_project(25680)) {
         ret = wl2866d_i2c_write(wl2866d_i2c_client, wl2866d_DVDD2_1200mV_on_config[VOL_ENABLE].reg, reg_val);
     } else {
         ret = wl2866d_i2c_write(wl2866d_i2c_client, wl2866d_on_config[VOL_ENABLE].reg, reg_val);

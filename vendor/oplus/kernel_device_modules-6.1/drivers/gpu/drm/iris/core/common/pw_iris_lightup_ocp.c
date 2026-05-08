@@ -875,16 +875,11 @@ int iris_conver_one_panel_cmd(u8 *dest, u8 *src, int len)
 	struct iris_cmd_desc desc;
 	struct iris_ocp_cmd *pocp_cmds = NULL;
 	struct iris_cmd_desc *ptx_cmds = NULL;
+	struct iris_cfg *pcfg = iris_get_cfg();
 
 	if (!src || !dest) {
 		IRIS_LOGE("src or dest is error");
 		return -EINVAL;
-	}
-
-	//abypass mode
-	if (iris_get_abyp_mode() == ANALOG_BYPASS_MODE) {
-		memcpy(dest, src, len);
-		return len;
 	}
 
 	cmdset.cmds = &desc;
@@ -893,7 +888,16 @@ int iris_conver_one_panel_cmd(u8 *dest, u8 *src, int len)
 	desc.msg.tx_buf = src;
 	desc.msg.tx_len = len;
 
+	mutex_lock(&pcfg->abyp_ctrl.abypass_mutex);
+	if (iris_get_abyp_mode() == ANALOG_BYPASS_MODE) {
+		iris_abyp_send_panel_cmd(&cmdset);
+		mutex_unlock(&pcfg->abyp_ctrl.abypass_mutex);
+		return len;
+	}
+
 	ret = __iris_pt_write_panel_cmd(&cmdset, &pocp_cmds, &ptx_cmds);
+	mutex_unlock(&pcfg->abyp_ctrl.abypass_mutex);
+
 	if (ret == -EINVAL)
 		return ret;
 	else if (ret == 1) {
@@ -951,6 +955,7 @@ int iris_vdo_panel_cmd(u8 *dest, u8 *src, int len)
 
 	return ret;
 }
+EXPORT_SYMBOL(iris_vdo_panel_cmd);
 
 int  _iris_pt_write_panel_cmd(struct iris_cmd_set *cmdset)
 {

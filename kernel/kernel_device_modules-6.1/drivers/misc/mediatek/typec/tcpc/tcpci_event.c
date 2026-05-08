@@ -1155,7 +1155,6 @@ void pd_notify_pe_snk_explicit_contract(struct pd_port *pd_port)
 {
 #if CONFIG_USB_PD_REV30
 	struct pe_data *pe_data = &pd_port->pe_data;
-	struct tcpc_device *tcpc = pd_port->tcpc;
 
 	if (pe_data->explicit_contract || !pd_check_rev30(pd_port))
 		return;
@@ -1164,6 +1163,8 @@ void pd_notify_pe_snk_explicit_contract(struct pd_port *pd_port)
 	pe_data->pd_traffic_control = PD_SINK_TX_START;
 	pd_restart_timer(pd_port, PD_TIMER_SNK_FLOW_DELAY);
 #else
+	struct tcpc_device *tcpc = pd_port->tcpc;
+
 	if (typec_get_cc_res() == TYPEC_CC_VOLT_SNK_3_0 &&
 	    tcpc->typec_remote_rp_level == TYPEC_CC_VOLT_SNK_3_0)
 		pe_data->pd_traffic_control = PD_SINK_TX_OK;

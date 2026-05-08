@@ -14,14 +14,13 @@
 
 #define DRIVER_NAME                  "gt9764v_25051"
 #define GT9764V_I2C_SLAVE_ADDR        0x18
-
 #define LOG_INF(format, args...)                                               \
 	pr_info(DRIVER_NAME " [%s] " format, __func__, ##args)
 
 #define GT9764V_NAME				"gt9764v_25051"
 #define GT9764V_MAX_FOCUS_POS			1023
 #define GT9764V_ORIGIN_FOCUS_POS			512
-#define GT9764V_MOVE_STEPS			  	50
+#define GT9764V_MOVE_STEPS			  	100
 /*
  * This sets the minimum granularity for the focus positions.
  * A value of 1 gives maximum accuracy for a desired focus position
@@ -48,15 +47,17 @@
 #define GT9764V_SET_VOLTAGE        2800000
 #define GT9764V_CONTROL_REG_MODE_DC  0x00
 #define GT9764V_CONTROL_REG_MODE_SAC 0x02
+
 #define VCM_IOC_POWER_ON         _IO('V', BASE_VIDIOC_PRIVATE + 3)
 #define VCM_IOC_POWER_OFF        _IO('V', BASE_VIDIOC_PRIVATE + 4)
 /* gt9764v device structure */
-
 struct mode_info {
     int32_t mode;
     int32_t flag;
 };
-#define VCM_IOC_SET_MODE         _IOWR('V', BASE_VIDIOC_PRIVATE + 6, struct mode_info)
+#define VCM_IOC_SET_MODE         _IOWR('V', BASE_VIDIOC_PRIVATE + 7, struct mode_info)
+
+/* gt9764v device structure */
 struct gt9764v_device {
 	struct v4l2_ctrl_handler ctrls;
 	struct v4l2_subdev sd;
@@ -69,6 +70,15 @@ struct gt9764v_device {
 	struct mutex af_lock;
 	bool active;
 };
+
+static int gt9764v_set_position_by_step(struct gt9764v_device *gt9764v, u16 position);
+static int gt9764v_set_position(struct gt9764v_device *gt9764v, u16 val);
+
+
+static unsigned int gt9764v_move_step = 50;
+static unsigned int gt9764v_move_step_delay = GT9764V_MOVE_DELAY_US;
+static u16 current_pos = 0;
+
 
 static inline struct gt9764v_device *to_gt9764v_vcm(struct v4l2_ctrl *ctrl)
 {
@@ -87,11 +97,10 @@ struct regval_list {
 };
 
 static struct regval_list gt9764v_init_regs[] = {
-    {0x02, 0x00, 2},
     {0x02, 0x02, 2},
     {0x06, 0x40, 2},
     {0x07, 0x6F, 2},
-    {0x0B, 0x20, 2},
+    {0x0B, 0x00, 2},
 };
 
 static int gt9764v_write_smbus(struct gt9764v_device *gt9764v, unsigned char reg,
@@ -127,102 +136,150 @@ static int gt9764v_write_array(struct gt9764v_device *gt9764v,
 	return 0;
 }
 
-static int gt9764v_set_position(struct gt9764v_device *gt9764v, u16 val)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(&gt9764v->sd);
-	int loop_time = 0, status = 0;
-	int ret = 0;
-	LOG_INF("gt9764v set position is %d", val);
-
-	if (mutex_trylock(&(gt9764v->af_lock))) {
-		/*wait for I2C bus idle*/
-		while (loop_time < 20) {
-			status = i2c_smbus_read_byte_data(client, GT9764V_STATUS_REG);
-			status = status & 0x01;//get reg 05 status
-			pr_debug("gt9764v 0x05 status:%x", status);
-			if(status == 0){
-				break;
-			}
-			loop_time++;
-			usleep_range(GT9764V_MOVE_DELAY_US, GT9764V_MOVE_DELAY_US + 100);
-		}
-		if (loop_time >= 20) {
-			mutex_unlock(&(gt9764v->af_lock));
-			pr_debug("waiting 0x05 flag timeout!");
-			return -ETIMEDOUT;
-		}
-
-		ret = i2c_smbus_write_word_data(client, GT9764V_SET_POSITION_ADDR, swab16(val<<1));
-		mutex_unlock(&(gt9764v->af_lock));
-		pr_debug("gt9764v set position is %d, ret is %d", val, ret);
-	} else {
-		LOG_INF("%s af_lock is locked, gt9764v set position is %d", __func__, val);
-		return -EBUSY;
-	}
-	return ret;
-}
-
-static int gt9764v_release(struct gt9764v_device *gt9764v)
+static int gt9764v_set_position_by_step(struct gt9764v_device *gt9764v, u16 position)
 {
 	int ret, val;
 	int diff_dac = 0;
 	int nStep_count = 0;
 	int i = 0;
-	struct i2c_client *client = v4l2_get_subdevdata(&gt9764v->sd);
+	u16 move_step = gt9764v_move_step;
+	u16 move_step_delay = gt9764v_move_step_delay;
 
-	diff_dac = GT9764V_ORIGIN_FOCUS_POS - gt9764v->focus->val;
+	if (!gt9764v->active) {
+		return 0;
+	}
 
+	if(move_step == 0) {
+		move_step = 50;
+		LOG_INF("%s error step  set to 50\n", __func__);
+	}
+
+	diff_dac = position - current_pos;
 	nStep_count = (diff_dac < 0 ? (diff_dac*(-1)) : diff_dac) /
-		GT9764V_MOVE_STEPS;
+		move_step;
 
-	val = gt9764v->focus->val;
+	//val = gt9764v->focus->val;
+	val = current_pos;
+
+	LOG_INF("%s  gt9764v->focus->val(%d) current_pos(%d)\n", __func__,  gt9764v->focus->val, current_pos);
+	LOG_INF("%s move_step(%d) move_step_delay(%d) diff_dac(%d) nStep_count(%d)\n", __func__, move_step, move_step_delay, diff_dac, nStep_count);
 
 	for (i = 0; i < nStep_count; ++i) {
-		val += (diff_dac < 0 ? (GT9764V_MOVE_STEPS*(-1)) : GT9764V_MOVE_STEPS);
+		val += (diff_dac < 0 ? (move_step*(-1)) : move_step);
 		ret = gt9764v_set_position(gt9764v, val);
 		if (ret) {
-			LOG_INF("%s I2C failure: %d",
-				__func__, ret);
+			LOG_INF("%s I2C failure: %d", __func__, ret);
 			return ret;
 		}
-		usleep_range(GT9764V_MOVE_DELAY_US,
-			     GT9764V_MOVE_DELAY_US + 1000);
+
+		if (move_step_delay) {
+			usleep_range(move_step_delay, move_step_delay);
+		}
 	}
 
-	// last step to origin
-	ret = gt9764v_set_position(gt9764v, GT9764V_ORIGIN_FOCUS_POS);
-	if (ret) {
-		LOG_INF("%s I2C failure: %d",
-				__func__, ret);
-		return ret;
+	if(current_pos != position) {
+		ret = gt9764v_set_position(gt9764v, position);
+		if (ret) {
+			LOG_INF("%s I2C failure: %d", __func__, ret);
+			return ret;
+		}
 	}
+
+    return 0;
+}
+
+static int gt9764v_set_position(struct gt9764v_device *gt9764v, u16 val)
+{
+    struct i2c_client *client = v4l2_get_subdevdata(&gt9764v->sd);
+    current_pos = val;
+    int ret = 0;
+    if (!gt9764v->active) {
+        pr_info("gt9764v set position is %d, active is %d", val, gt9764v->active);
+        return 0;
+    }
+    if(mutex_trylock(&(gt9764v->af_lock))) {
+        ret = i2c_smbus_write_word_data(client, GT9764V_SET_POSITION_ADDR, swab16(val));
+        mutex_unlock(&(gt9764v->af_lock));
+        pr_info("gt9764v set position is %d", val);
+    } else {
+        pr_info("%s af_lock is locked, gt9764v set position is  %d",__func__, val);
+    }
+
+    return ret;
+}
+
+static int gt9764v_release(struct gt9764v_device *gt9764v)
+{
+    int ret, val;
+    int diff_dac = 0;
+    int nStep_count = 0;
+    int i = 0;
+    struct i2c_client *client = v4l2_get_subdevdata(&gt9764v->sd);
+
+    if (!gt9764v->active) {
+        return 0;
+    }
+    LOG_INF("%s +\n", __func__);
+    diff_dac = GT9764V_ORIGIN_FOCUS_POS - gt9764v->focus->val;
+
+    nStep_count = (diff_dac < 0 ? (diff_dac*(-1)) : diff_dac) /
+        GT9764V_MOVE_STEPS;
+
+    val = gt9764v->focus->val;
+
+    for (i = 0; i < nStep_count; ++i) {
+        val += (diff_dac < 0 ? (GT9764V_MOVE_STEPS*(-1)) : GT9764V_MOVE_STEPS);
+        ret = gt9764v_set_position(gt9764v, val);
+        if (ret) {
+            LOG_INF("%s I2C failure: %d",
+                __func__, ret);
+            return ret;
+        }
+        usleep_range(GT9764V_MOVE_DELAY_US,
+                 GT9764V_MOVE_DELAY_US + 1000);
+    }
+
+    // last step to origin
+    ret = gt9764v_set_position(gt9764v, GT9764V_ORIGIN_FOCUS_POS);
+    if (ret) {
+        LOG_INF("%s I2C failure: %d",
+                __func__, ret);
+        return ret;
+    }
 
     ret = i2c_smbus_write_byte_data(client, GT9764V_CONTROL_REG,
                     GT9764V_CONTROL_POWER_DOWN);
     if (ret)
         return ret;
 
+    gt9764v->active = false;
+    usleep_range(5000, 5000 + 1000);
     LOG_INF("%s -\n", __func__);
     return 0;
 }
 
 static int gt9764v_init(struct gt9764v_device *gt9764v)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(&gt9764v->sd);
-    int ret, val;
+    struct i2c_client *client = v4l2_get_subdevdata(&gt9764v->sd);
+    int ret;
+    if (gt9764v->active) {
+        return 0;
+    }
     LOG_INF("%s +\n", __func__);
-	client->addr = GT9764V_I2C_SLAVE_ADDR >> 1;
+    client->addr = GT9764V_I2C_SLAVE_ADDR >> 1;
     ret = gt9764v_write_array(gt9764v, gt9764v_init_regs,
                     ARRAY_SIZE(gt9764v_init_regs));
-	if (ret)
-		return ret;
 
-	val = GT9764V_ORIGIN_FOCUS_POS;
-    ret = gt9764v_set_position(gt9764v, val);
-	if (ret)
-		return ret;
+    gt9764v->active = true;
 
-	LOG_INF("%s -\n", __func__);
+    ret = gt9764v_set_position(gt9764v, GT9764V_ORIGIN_FOCUS_POS);
+    ret = gt9764v_set_position_by_step(gt9764v, gt9764v->focus->val);
+
+    if (ret)
+        return ret;
+
+    gt9764v->active = true;
+    LOG_INF("%s -\n", __func__);
     return 0;
 }
 
@@ -347,28 +404,10 @@ static int gt9764v_close(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 
 static int gt9764v_vcm_resume(struct gt9764v_device *gt9764v)
 {
-	int ret = 0;
-
-	mutex_lock(&(gt9764v->af_lock));
-	if (gt9764v->active) {
-		mutex_unlock(&(gt9764v->af_lock));
-		return 0;
-	}
-	gt9764v->active = true;
-	mutex_unlock(&(gt9764v->af_lock));
-
-	ret = gt9764v_init(gt9764v);
-	if (ret) {
-		pr_info("%s init failure: %d", __func__, ret);
-		return ret;
-	}
-	ret = gt9764v_set_position(gt9764v, gt9764v->focus->val);
-	if (ret) {
-		pr_info("%s I2C failure: %d", __func__, ret);
-		return ret;
-	}
-	pr_info("%s exit stand by mode, active:1\n", __func__);
-	return ret;
+    int ret = 0;
+    ret = gt9764v_init(gt9764v);
+    LOG_INF("%s exit stand by mode, active:%d\n", __func__, gt9764v->active);
+    return ret;
 }
 
 static int gt9764v_vcm_suspend(struct gt9764v_device *gt9764v)
@@ -392,17 +431,15 @@ enum ACTUATOR_MODE {
 
 static bool gt9764v_is_busy(struct gt9764v_device *gt9764v)
 {
-	int ret;
-	struct i2c_client *client = v4l2_get_subdevdata(&gt9764v->sd);
-
-	ret = i2c_smbus_read_byte_data(client, 0x05);
-	if (ret < 0) {
-		pr_err("%s: I2C read failed: %d\n", __func__, ret);
-		return false;
-	}
-
-	pr_info("%s, busy:0x%02x", __func__, ret);
-	return !!(ret & 0x01);
+    unsigned char busy_reg;
+    bool busy_status = false;
+    struct i2c_client *client = v4l2_get_subdevdata(&gt9764v->sd);
+    busy_reg = i2c_smbus_read_byte_data(client, 0x05);
+    pr_info("%s, busy:0x%02x", __func__, busy_reg);
+    if (busy_reg < 0)
+       return false;
+    busy_status = (busy_reg & 0x01) ? true : false;
+    return busy_status;
 }
 
 static int gt9764v_actuator_mode(struct gt9764v_device *gt9764v,  unsigned char mode)
@@ -509,7 +546,7 @@ static int gt9764v_init_controls(struct gt9764v_device *gt9764v)
 	v4l2_ctrl_handler_init(hdl, 1);
 
 	gt9764v->focus = v4l2_ctrl_new_std(hdl, ops, V4L2_CID_FOCUS_ABSOLUTE,
-			  0, GT9764V_MAX_FOCUS_POS, GT9764V_FOCUS_STEPS, 0);
+			  0, GT9764V_MAX_FOCUS_POS, GT9764V_FOCUS_STEPS, GT9764V_ORIGIN_FOCUS_POS);
 
 	if (hdl->error)
 		return hdl->error;
@@ -608,7 +645,6 @@ static void gt9764v_remove(struct i2c_client *client)
 	LOG_INF("%s\n", __func__);
 
 	gt9764v_subdev_cleanup(gt9764v);
-	mutex_destroy(&gt9764v->af_lock);
 
 	// return 0;
 }

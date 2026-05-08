@@ -46,9 +46,9 @@
 		oplus,pps_warm_allow_soc = <50>;
 		oplus,pps_strategy_normal_current = <5000>;
 		oplus,pps_over_high_or_low_current = <3000>;
-		oplus,pps_timeout_third = <10800>;
+		oplus,pps_timeout_third = <14502>;
 		oplus,pps_timeout_oplus = <10800>;
-		oplus,pps_ibat_over_third = <12000>;
+		oplus,pps_ibat_over_third = <11400>;
 		oplus,pps_ibat_over_oplus = <12000>;
 		oplus,pps_full_cool_sw_vbat = <4490>;
 		oplus,pps_full_normal_sw_vbat = <4490>;
@@ -65,6 +65,9 @@
 		oplus,pps_little_cool_high_temp = <210>;
 		oplus,pps_charge_strategy_soc = <0 20 35 55 75 85 95>;
 		oplus,pps_charge_strategy_temp = <0 50 120 160 350 440 510>;
+
+		oplus,plc_strategy-data = <&pps_simple_strategy>;
+		oplus,plc_strategy-names = "default";
 
 		pps_oplus_lcf_strategy {
 			oplus,temp_type = <OPLUS_STRATEGY_USE_SHELL_TEMP>;

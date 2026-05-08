@@ -34,16 +34,17 @@
 
 static void _iris_i2c_preload_work(struct work_struct *work)
 {
-        struct iris_cfg *pcfg = iris_get_cfg();
-        struct iris_vendor_cfg *pcfg_ven = iris_get_vendor_cfg();
+	struct iris_cfg *pcfg = iris_get_cfg();
+	struct iris_vendor_cfg *pcfg_ven = iris_get_vendor_cfg();
 
-        if (!pcfg || !pcfg_ven || !pcfg_ven->panel_ext)
-                return;
+	if (!pcfg || !pcfg_ven || !pcfg_ven->panel_ext)
+		return;
 
-        pcfg->iris_i2c_preload = true;
-		iris_reset_sys_domain();
-        iris_enable(NULL);
-        pcfg->iris_i2c_preload = false;
+	pcfg->iris_i2c_preload = true;
+	iris_reset_sys_domain();
+	iris_enable(NULL);
+	iris_send_one_wired_cmd(IRIS_POWER_DOWN_MIPI);
+	pcfg->iris_i2c_preload = false;
 }
 
 static void _iris_i2c_preload_work_init(void)
@@ -55,6 +56,14 @@ static void _iris_i2c_preload_work_init(void)
                         && (dsi_iris_get_panel_mode() == IRIS_VIDEO_MODE))
                 INIT_WORK(&pcfg->iris_i2c_preload_work, _iris_i2c_preload_work);
 }
+
+void iris_aod_state_ops(struct iris_lightup_ops *lightup_ops)
+{
+	struct iris_cfg *pcfg = iris_get_cfg();
+	if (pcfg && lightup_ops)
+		pcfg->lightup_ops.iris_get_aod_state = lightup_ops->iris_get_aod_state;
+}
+EXPORT_SYMBOL(iris_aod_state_ops);
 
 void iris_init_i7p(struct drm_panel *panel, struct mtk_panel_ext *panel_ext, struct drm_connector *conn)
 {
@@ -140,6 +149,7 @@ void iris_init_i7p(struct drm_panel *panel, struct mtk_panel_ext *panel_ext, str
 	pcfg->frc_demo_window = 0;
 	pcfg->dev = panel->dev;
 	pcfg->memc_chain = false;
+	pcfg->panel_backlight_in_pt = 0;
 	atomic_set(&pcfg->fod_cnt, 0);
 
 	iris_init_memc();
@@ -169,6 +179,7 @@ void iris_init_i7p(struct drm_panel *panel, struct mtk_panel_ext *panel_ext, str
 	mutex_init(&pcfg->gs_mutex);
 	mutex_init(&pcfg->ioctl_mutex);
 	mutex_init(&pcfg->i2c_read_mutex);
+	mutex_init(&pcfg->fw_parse_cmd_lock);
 	iris_driver_register();
 	iris_pure_i2c_bus_init();
 	iris_i2c_bus_init();

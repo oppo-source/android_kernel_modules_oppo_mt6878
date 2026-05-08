@@ -245,3 +245,10 @@ config OPLUS_SCHED_GROUP_OPT
 	bool "Oplus sched group optimization"
 	depends on FAIR_GROUP_SCHED
 	default FAIR_GROUP_SCHED
+
+config OPLUS_CPU_SKIP_ROTATION
+	bool "oplus cpu skip rotation"
+	default n
+	depends on OPLUS_FEATURE_SCHED_ASSIST
+	help
+	  rotation need skip ux thread.

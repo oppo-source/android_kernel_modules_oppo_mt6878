@@ -1072,6 +1072,12 @@ static int _iris_abyp_enter_precheck(void)
 			IRIS_LOGI("%s(): iris i2c read fail", __func__);
 			goto exit;
 		}
+		if (value & 0x7) {
+			if (pcfg->iris_i2c_read(pcfg->status_reg_addr, &value) < 0) {
+				IRIS_LOGI("%s(): iris i2c read fail", __func__);
+				goto exit;
+			}
+		}
 		IRIS_LOGD("%s(), value = 0x%08x", __func__, value);
 		rc = 0;
 	}
@@ -1118,7 +1124,8 @@ int iris_lp_abyp_enter(void)
 		}
 	}
 #endif
-	iris_send_ipopt_cmds(IRIS_IP_SYS, 0x30);
+	if (pcfg->rx_mode == IRIS_VIDEO_MODE)
+		iris_send_ipopt_cmds(IRIS_IP_SYS, 0x30);
 	pcfg->abyp_ctrl.wait_cmdq = true;
 	_iris_send_grcp_abyp(true);
 
@@ -1172,6 +1179,7 @@ enter_abyp_begin:
 	pcfg->iris_pq_disable = 0;
 	pcfg->abyp_ctrl.abyp_failed = false;
 	pcfg->abyp_ctrl.wait_cmdq = false;
+	pcfg->panel_backlight_in_pt = 0;
 	return rc;
 }
 
@@ -1269,6 +1277,8 @@ int iris_lp_abyp_exit(void)
 
 	pcfg = iris_get_cfg();
 
+	if (pcfg->lightup_ops.iris_get_aod_state && pcfg->lightup_ops.iris_get_aod_state())
+		return rc;
 
 #ifdef IRIS_EXT_CLK
 	if (pcfg->iris_clk_set)
@@ -1389,8 +1399,16 @@ exit_abyp_loop:
 		if (_debug_on_opt & 0x80)
 			iris_force_mipi_pwrdn_enable(false, false);
 	}
-	iris_send_ipopt_cmds(IRIS_IP_SYS, 0x31);
+	if (pcfg->iris_chip_type == CHIP_IRIS7P && pcfg->rx_mode == IRIS_CMD_MODE) {
+		//Enable mipi hopping prepare
+		iris_send_ipopt_cmds(IRIS_IP_SYS, 0x32);
+		//enable mipi hopping
+		if (pcfg->mipi_hopping_status)
+			iris_send_ipopt_cmds(IRIS_IP_SYS, 0x33);
+	} else if (pcfg->rx_mode == IRIS_VIDEO_MODE)
+		iris_send_ipopt_cmds(IRIS_IP_SYS, 0x31);
 	pcfg->abyp_ctrl.abyp_failed = false;
+	pcfg->panel_backlight_in_pt = IRIS_BL_MAX_LEVEL;
 	return rc;
 }
 
@@ -3087,3 +3105,23 @@ void iris_set_mipi_hopping_status(int enable)
 		iris_send_ipopt_cmds(IRIS_IP_SYS, enable ? 0x33 : 0x34);
 	}
 }
+
+void iris_set_panel_backlight(uint32_t backlight_level)
+{
+	struct iris_cfg *pcfg = iris_get_cfg();
+
+	pcfg->panel_backlight_in_pt = backlight_level;
+}
+EXPORT_SYMBOL(iris_set_panel_backlight);
+
+uint32_t iris_get_panel_backlight(void)
+{
+	uint32_t backlight_level = 0;
+	struct iris_cfg *pcfg = iris_get_cfg();
+
+	backlight_level = pcfg->panel_backlight_in_pt;
+
+	return backlight_level;
+}
+EXPORT_SYMBOL(iris_get_panel_backlight);
+

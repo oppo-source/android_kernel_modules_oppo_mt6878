@@ -416,28 +416,91 @@ bool sy6974b_get_bus_gd(struct sy6974b_chip *chip)
 	return bus_gd;
 }
 
+static void sy6974b_plug_keep_event_work(struct sy6974b_chip *chip)
+{
+	chg_err("prev_pg & now_pg is false\n");
+#ifdef CONFIG_OPLUS_CHARGER_MTK
+	Charger_Detect_Release();
+#endif
+	chip->bc12_done = false;
+	chip->bc12_retried = 0;
+	chip->bc12_delay_cnt = 0;
+}
+
+static void sy6974b_plugout_event_work(struct sy6974b_chip *chip)
+{
+	bool hiz = false;
+
+	hiz = sy6974b_check_really_suspend_charger(chip);
+	chip->bc12_done = false;
+	chip->bc12_retried = 0;
+	chip->bc12_delay_cnt = 0;
+	chip->oplus_charger_type = POWER_SUPPLY_TYPE_UNKNOWN;
+	chip->charger_current_pre = -1;
+	sy6974b_request_dpdm(chip, false);
+#ifdef CONFIG_OPLUS_CHARGER_MTK
+	Charger_Detect_Release();
+	oplus_chg_pullup_dp_set(false);
+#endif
+	if (hiz)
+		sy6974b_suspend_charger(false);
+	sy6974b_inform_charger_type(chip);
+	sy6974b_set_wdt_timer(chip, REG05_SY6974B_WATCHDOG_TIMER_DISABLE);
+	oplus_chg_wakelock(chip, false);
+}
+
+static void sy6974b_plugin_event_work(struct sy6974b_chip *chip)
+{
+	bool hiz = false;
+	hiz = sy6974b_check_really_suspend_charger(chip);
+
+	oplus_chg_wakelock(chip, true);
+#ifdef CONFIG_OPLUS_CHARGER_MTK
+	if (get_boot_mode() != META_BOOT)
+		Charger_Detect_Init();
+#endif
+	if (oplus_is_rf_ftm_mode()) {
+		chip->oplus_charger_type = POWER_SUPPLY_TYPE_USB;
+		sy6974b_inform_charger_type(chip);
+		pr_err("Meta mode force usb type\n");
+	}
+
+	if (get_boot_mode() != META_BOOT && false == oplus_is_rf_ftm_mode())
+		sy6974b_request_dpdm(chip, true);
+	sy6974b_set_wdt_timer(chip, REG05_SY6974B_WATCHDOG_TIMER_40S);
+	chip->bc12_done = false;
+	chip->bc12_retried = 0;
+	chip->bc12_delay_cnt = 0;
+	if (hiz)
+		sy6974b_suspend_charger(false);
+	if (chip->oplus_charger_type == POWER_SUPPLY_TYPE_UNKNOWN)
+		sy6974b_get_bc12(chip);
+}
+
+static void sy6974b_pluggable_event_work(struct sy6974b_chip *chip, bool plug, bool prev_pg)
+{
+	if (plug)
+		oplus_chg_wakelock(chip, true);
+
+	if (!prev_pg && chip->power_good) {
+		sy6974b_plugin_event_work(chip);
+	} else if (prev_pg && !chip->power_good) {
+		sy6974b_plugout_event_work(chip);
+	} else if (!prev_pg && !chip->power_good) {
+		sy6974b_plug_keep_event_work(chip);
+	}
+}
+
 static void sy6974b_event_work(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct sy6974b_chip *chip = container_of(dwork, struct sy6974b_chip, event_work);
-	int rc = 0;
-	union mms_msg_data data = { 0 };
-	bool prev_pg = false, curr_pg = false, bus_gd = false;
+	bool prev_pg = false;
+	bool curr_pg = false;
+	bool bus_gd = false;
 	int vbus = 0;
-	bool hiz = false;
-
-	hiz = sy6974b_check_really_suspend_charger(chip);
-
-	rc = oplus_mms_get_item_data(chip->cpa_topic, CPA_ITEM_ALLOW, &data, false);
-	if (rc < 0) {
-		chg_err("cannot get CPA_ITEM_ALLOW data, rc=%d\n", rc);
-		return;
-	}
 
 	get_vbus_voltage(chip, &vbus);
-
-	chip->cpa_current_type = data.intval;
-
 	if (chip->otg_enable) {
 		chg_info("is otg mode\n");
 		return;
@@ -461,49 +524,8 @@ static void sy6974b_event_work(struct work_struct *work)
 	chip->vbus_present = curr_pg;
 	chip->power_good = curr_pg;
 	chg_info("(%d,%d, %d, %d)\n", prev_pg, chip->power_good, curr_pg, bus_gd);
-	if (curr_pg)
-		oplus_chg_wakelock(chip, true);
 
-	if (!prev_pg && chip->power_good) {
-		oplus_chg_wakelock(chip, true);
-#ifdef CONFIG_OPLUS_CHARGER_MTK
-		if (get_boot_mode() != META_BOOT)
-			Charger_Detect_Init();
-#endif
-		sy6974b_request_dpdm(chip, true);
-		sy6974b_set_wdt_timer(chip, REG05_SY6974B_WATCHDOG_TIMER_40S);
-		chip->bc12_done = false;
-		chip->bc12_retried = 0;
-		chip->bc12_delay_cnt = 0;
-		if (hiz)
-			sy6974b_suspend_charger(false);
-		if (chip->oplus_charger_type == POWER_SUPPLY_TYPE_UNKNOWN)
-			sy6974b_get_bc12(chip);
-	} else if (prev_pg && !chip->power_good) {
-		chip->bc12_done = false;
-		chip->bc12_retried = 0;
-		chip->bc12_delay_cnt = 0;
-		chip->oplus_charger_type = POWER_SUPPLY_TYPE_UNKNOWN;
-		chip->charger_current_pre = -1;
-		sy6974b_request_dpdm(chip, false);
-#ifdef CONFIG_OPLUS_CHARGER_MTK
-		Charger_Detect_Release();
-		oplus_chg_pullup_dp_set(false);
-#endif
-		if (hiz)
-			sy6974b_suspend_charger(false);
-		sy6974b_inform_charger_type(chip);
-		sy6974b_set_wdt_timer(chip, REG05_SY6974B_WATCHDOG_TIMER_DISABLE);
-		oplus_chg_wakelock(chip, false);
-	} else if (!prev_pg && !chip->power_good) {
-		chg_err("prev_pg & now_pg is false\n");
-#ifdef CONFIG_OPLUS_CHARGER_MTK
-		Charger_Detect_Release();
-#endif
-		chip->bc12_done = false;
-		chip->bc12_retried = 0;
-		chip->bc12_delay_cnt = 0;
-	}
+	sy6974b_pluggable_event_work(chip, curr_pg, prev_pg);
 
 #ifdef CONFIG_OPLUS_CHARGER_MTK
 	if (chip->oplus_charger_type == POWER_SUPPLY_TYPE_USB_CDP)
@@ -732,7 +754,8 @@ static int sy6974b_rerun_bc12(struct oplus_chg_ic_dev *ic_dev)
 	chip = oplus_chg_ic_get_drvdata(ic_dev);
 
 	chg_info("rerun bc1.2\n");
-	sy6974b_request_dpdm(chip, true);
+	if (get_boot_mode() != META_BOOT && false == oplus_is_rf_ftm_mode())
+		sy6974b_request_dpdm(chip, true);
 	/* no need to retry */
 	chip->bc12_retry = true;
 	chip->auto_bc12 = false;
@@ -968,7 +991,8 @@ static void sy6974b_subscribe_wired_topic(struct oplus_mms *topic,
 	oplus_mms_get_item_data(chip->wired_topic, WIRED_ITEM_PRESENT, &data, true);
 	chip->vbus_present = !!data.intval;
 	if (chip->vbus_present && !chip->otg_enable) {
-		sy6974b_request_dpdm(chip, true);
+		if (get_boot_mode() != META_BOOT && false == oplus_is_rf_ftm_mode())
+			sy6974b_request_dpdm(chip, true);
 		sy6974b_bc12_boot_check(chip);
 	}
 }
@@ -1011,36 +1035,60 @@ static bool sy6974b_check_really_suspend_charger(struct sy6974b_chip *chip)
 	return hiz;
 }
 
-static void sy6974b_really_suspend_charger(struct sy6974b_chip *chip, bool en)
+static void sy6974b_suspend_charger_extern(struct sy6974b_chip *chip, bool en)
 {
-	int rc = 0;
-
-	if (!chip) {
-		return;
-	}
-
-	if ((atomic_read(&chip->driver_suspended) == 1) ||
-		((chip->oplus_charger_type == POWER_SUPPLY_TYPE_UNKNOWN) && chip->vbus_present && en) ||
-		(chip->otg_enable == true && en)) {
-		return;
-	}
-
-	chg_info("sy6974b_really_suspend_charger en:%d\n", en);
-
-	rc = sy6974b_write_byte_mask(chip, REG00_SY6974B_ADDRESS,
-			REG00_SY6974B_SUSPEND_MODE_MASK,
-			en ? REG00_SY6974B_SUSPEND_MODE_ENABLE : REG00_SY6974B_SUSPEND_MODE_DISABLE);
-	if (rc < 0) {
-		chg_err("fail en=%d rc = %d\n", en, rc);
-	}
-
 	if (en) {
 		schedule_delayed_work(&chip->event_work, msecs_to_jiffies(500));
 		sy6974b_charging_current_write_fast(chip, DISCONNECT_FCC_MAX_CURR);
 	} else {
 		if (!IS_ERR_OR_NULL(chip->fcc_votable))
 			rerun_election(chip->fcc_votable, false);
+		sy6974b_input_current_limit_without_aicl(chip, chip->charger_current_pre);
 	}
+}
+
+static bool sy6974b_check_force_unsuspend_charger(struct sy6974b_chip *chip, bool en)
+{
+	if ((atomic_read(&chip->driver_suspended) == 1) ||
+		((chip->oplus_charger_type == POWER_SUPPLY_TYPE_UNKNOWN) &&
+		chip->vbus_present && en) ||
+		(chip->otg_enable == true && en)) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+static void sy6974b_really_suspend_charger(struct sy6974b_chip *chip, bool en)
+{
+	if (!chip || sy6974b_check_force_unsuspend_charger(chip, en)) {
+		return;
+	}
+
+	chg_info("sy6974b_really_suspend_charger en:%d\n", en);
+#ifndef CONFIG_DISABLE_OPLUS_FUNCTION
+#ifdef CONFIG_OPLUS_CHARGER_MTK
+	if (get_boot_mode() != META_BOOT && false == oplus_is_rf_ftm_mode())
+		sy6974b_write_byte_mask(chip, REG00_SY6974B_ADDRESS,
+			REG00_SY6974B_SUSPEND_MODE_MASK, REG00_SY6974B_SUSPEND_MODE_DISABLE);
+	else
+		sy6974b_write_byte_mask(chip, REG00_SY6974B_ADDRESS,
+			REG00_SY6974B_SUSPEND_MODE_MASK,
+			en ? REG00_SY6974B_SUSPEND_MODE_ENABLE : REG00_SY6974B_SUSPEND_MODE_DISABLE);
+
+#else
+	if (get_boot_mode() != META_BOOT && false == oplus_is_rf_ftm_mode())
+		sy6974b_write_byte_mask(chip, REG00_SY6974B_ADDRESS,
+			REG00_SY6974B_SUSPEND_MODE_MASK, REG00_SY6974B_SUSPEND_MODE_DISABLE);
+	else
+		sy6974b_write_byte_mask(chip, REG00_SY6974B_ADDRESS,
+			REG00_SY6974B_SUSPEND_MODE_MASK,
+			en ? REG00_SY6974B_SUSPEND_MODE_ENABLE : REG00_SY6974B_SUSPEND_MODE_DISABLE);
+#endif
+#endif
+
+	sy6974b_suspend_charger_extern(chip, en);
+	return;
 }
 
 int sy6974b_suspend_charger_input(struct sy6974b_chip *chip)

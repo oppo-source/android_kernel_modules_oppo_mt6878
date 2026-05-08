@@ -44,6 +44,9 @@
 #include "oplus_display_trackpoint_report.h"
 #endif /* OPLUS_TRACKPOINT_REPORT */
 
+#if defined(CONFIG_PXLW_IRIS)
+#include "dsi_iris_api.h"
+#endif /* CONFIG_PXLW_IRIS */
 #define ESD_TRY_CNT 5
 #define ESD_CHK_TRY_CNT 5
 #define ESD_CHECK_PERIOD 3000 /* ms */
@@ -238,6 +241,13 @@ int _mtk_esd_check_read(struct drm_crtc *crtc, int check_num)
 		/* Record Vblank end timestamp and calculate duration */
 		mtk_vblank_config_rec_end_cal(mtk_crtc, cmdq_handle, ESD_CHECK);
 	} else { /* VDO mode */
+#if defined(CONFIG_PXLW_IRIS)
+		if (iris_is_chip_supported() && iris_is_pt_mode(false)) {
+			mtk_ddp_comp_io_cmd(output_comp, cmdq_handle, ESD_CHECK_READ,
+						(void *)mtk_crtc);
+			goto check;
+		}
+#endif /* CONFIG_PXLW_IRIS */
 		if (mtk_crtc_with_sub_path(crtc, mtk_crtc->ddp_mode))
 			mtk_crtc_wait_frame_done(mtk_crtc, cmdq_handle, DDP_SECOND_PATH,
 						 (mtk_crtc->is_mml || mtk_crtc->is_mml_dl) ? 0 : 1);
@@ -297,6 +307,7 @@ int _mtk_esd_check_read(struct drm_crtc *crtc, int check_num)
 
 	mtk_ddp_comp_io_cmd(output_comp, NULL, CONNECTOR_READ_EPILOG,
 				    NULL);
+check:
 	if (esd_ctx->chk_sta == 0xff) {
 		ret = -1;
 		if (need_wait_esd_eof(crtc, panel_ext)) {
@@ -805,7 +816,9 @@ static int mtk_drm_esd_check_worker_kthread(void *data)
 #ifdef OPLUS_FEATURE_DISPLAY
 			if (read_ddic_once && comp && esd_ctx->crtc) {
 				if (mtk_dsi_is_cmd_mode(comp) || prj_id == 24891 || prj_id == 24892 || prj_id == 24035 || prj_id == 24345
-					|| prj_id == 24825 || prj_id == 24622 || prj_id == 24769 || prj_id == 24749 || prj_id == 24780) {
+					|| prj_id == 24825 || prj_id == 24622 || prj_id == 24769 || prj_id == 24749 || prj_id == 24780
+					|| 25051 == prj_id || 25271 == prj_id || 25069 == prj_id || 25321 == prj_id || 25322 == prj_id
+					|| 25711 == prj_id || 25712 == prj_id || 25615 == prj_id) {
 					panel_id_read(esd_ctx->crtc);
 					usleep_range(3000, 3100);
 					DDPMSG("[ESD] get panel_serial_number\n");

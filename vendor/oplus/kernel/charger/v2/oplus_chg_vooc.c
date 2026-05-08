@@ -850,6 +850,32 @@ static void oplus_vooc_set_online_keep(struct oplus_chg_vooc *chip, bool keep)
 	chg_info("vooc_online_keep = %s\n", keep ? "true" : "false");
 }
 
+static void oplus_vooc_sub_btb_connnect_check(struct oplus_chg_vooc *chip)
+{
+	int btb_abnormal_current = 0;
+	union mms_msg_data data = { 0 };
+
+	if (NULL == chip || NULL == chip->gauge_topic)
+		return;
+
+	oplus_mms_get_item_data(chip->gauge_topic, GAUGE_ITEM_SUB_BTB_STATE, &data,  false);
+	if (data.intval == BATT_BTB_STATE_NOT_CONNECT) {
+		btb_abnormal_current = oplus_gauge_get_sub_btb_curr_limit(chip->gauge_topic);
+		chg_debug("sub_btb_state = %d is abnormal, set limit current %d mA.\n",
+			data.intval, btb_abnormal_current);
+		if (btb_abnormal_current > 0)
+			vote(chip->vooc_curr_votable, BAD_SUB_BTB_VOTER, true,
+			     btb_abnormal_current, false);
+	} else if (data.intval == BATT_BTB_STATE_CONNECT) {
+		vote(chip->vooc_curr_votable, BAD_SUB_BTB_VOTER, false,
+			 0, false);
+	} else {
+		chg_info("state[%d] is not support now!", data.intval);
+	}
+
+	return;
+}
+
 static void oplus_vooc_set_vooc_charging(struct oplus_chg_vooc *chip,
 					 bool charging)
 {
@@ -1709,18 +1735,52 @@ static int oplus_vooc_get_real_wired_type(struct oplus_chg_vooc *chip)
 #define BEFORE_VOOC_CURR_CHECK 200
 #define WAIT_CURR_STARUP 500
 #define BOOT_RESETADAPTER_20S 20
+static bool oplus_vooc_check_present(struct oplus_chg_vooc *chip)
+{
+	bool present = false;
+
+	present = oplus_wired_is_present();
+	if (!present) {
+		if (!chip->vooc_online) {
+			chip->switch_retry_count = 0;
+			oplus_vooc_cpa_switch_end(chip);
+		}
+		return true;
+	}
+
+	return false;
+}
+
+static void oplus_vooc_check_ibus(struct oplus_chg_vooc *chip)
+{
+	int rc;
+	union mms_msg_data data = { 0 };
+
+	if (chip->switch_retry_count == 0 && oplus_wired_get_ibus() < BEFORE_VOOC_CURR_CHECK) {
+		rc = oplus_mms_get_item_data(chip->wired_topic, WIRED_ITEM_ICL_DONE_STATUS, &data, true);
+		if (rc == 0 && data.intval == 0) {
+			reinit_completion(&chip->icl_done_ack);
+			if (!chip->irq_plugin) {
+				chg_info("plugout not check ibus\n");
+				return;
+			}
+			rc = wait_for_completion_timeout(&chip->icl_done_ack,
+							 msecs_to_jiffies(WAIT_CURR_STARUP));
+			chg_info("wait wired icl done over, left %u ms\n", jiffies_to_msecs(rc));
+		}
+	}
+}
+
 static void oplus_vooc_switch_check_work(struct work_struct *work)
 {
 	struct delayed_work *dwork = to_delayed_work(work);
 	struct oplus_chg_vooc *chip = container_of(dwork, struct oplus_chg_vooc,
 						   vooc_switch_check_work);
 	int chg_type;
-	bool present = false;
 	bool retry_flag = false;
 	static unsigned long fastchg_check_timeout;
 	unsigned long schedule_delay = 0;
 	int rc;
-	union mms_msg_data data = { 0 };
 	struct timespec64 uptime;
 
 	chg_info("vooc switch check\n");
@@ -1737,12 +1797,8 @@ static void oplus_vooc_switch_check_work(struct work_struct *work)
 		return;
 	}
 
-	present = oplus_wired_is_present();
-	if (!present) {
-		if (!chip->vooc_online) {
-			chip->switch_retry_count = 0;
-			oplus_vooc_cpa_switch_end(chip);
-		}
+	rc = oplus_vooc_check_present(chip);
+	if (rc) {
 		chg_info("vooc_online = %d, present is false, return\n", chip->vooc_online);
 		return;
 	}
@@ -1857,14 +1913,11 @@ static void oplus_vooc_switch_check_work(struct work_struct *work)
 		}
 	}
 
-	if (chip->switch_retry_count == 0 && oplus_wired_get_ibus() < BEFORE_VOOC_CURR_CHECK) {
-		rc = oplus_mms_get_item_data(chip->wired_topic, WIRED_ITEM_ICL_DONE_STATUS, &data, true);
-		if (rc == 0 && data.intval == 0) {
-			reinit_completion(&chip->icl_done_ack);
-			rc = wait_for_completion_timeout(&chip->icl_done_ack,
-							 msecs_to_jiffies(WAIT_CURR_STARUP));
-			chg_info("wait wired icl done over\n");
-		}
+	oplus_vooc_check_ibus(chip);
+	rc = oplus_vooc_check_present(chip);
+	if (rc) {
+		chg_info("vooc_online = %d, present is false, return\n", chip->vooc_online);
+		return;
 	}
 
 	chg_info("switch_retry_count=%d, fast_chg_status=%d fastchg_check_timeout=%lu\n",
@@ -3127,6 +3180,7 @@ static void oplus_vooc_fastchg_work(struct work_struct *work)
 			cancel_delayed_work_sync(&chip->check_charger_out_work);
 			oplus_vooc_set_online_keep(chip, true);
 			oplus_vooc_set_vooc_started(chip, true);
+			oplus_vooc_sub_btb_connnect_check(chip);
 			vote(chip->vooc_disable_votable, FASTCHG_DUMMY_VOTER,
 			     false, 0, false);
 			if (chip->wired_icl_votable)
@@ -3532,6 +3586,14 @@ out:
 		oplus_vooc_set_awake(chip, false);
 }
 
+static void oplus_vooc_plugout_clear_complete(struct oplus_chg_vooc *chip)
+{
+	if (!chip->irq_plugin) {
+		complete_all(&chip->vooc_wait_bc12);
+		complete_all(&chip->icl_done_ack);
+	}
+}
+
 static void oplus_vooc_wired_subs_callback(struct mms_subscribe *subs,
 					   enum mms_msg_type type, u32 id, bool sync)
 {
@@ -3572,6 +3634,7 @@ static void oplus_vooc_wired_subs_callback(struct mms_subscribe *subs,
 		case WIRED_ITEM_PRESENT:
 			oplus_mms_get_item_data(chip->wired_topic, id, &data, false);
 			chip->irq_plugin = !!data.intval;
+			oplus_vooc_plugout_clear_complete(chip);
 			schedule_work(&chip->abnormal_adapter_check_work);
 			break;
 		case WIRED_TIME_ABNORMAL_ADAPTER:
@@ -4016,9 +4079,11 @@ static void oplus_vooc_plugin_work(struct work_struct *work)
 		chip->check_curr_delay = false;
 
 		/* clean vooc switch status */
-		chip->switch_retry_count = 0;
 		oplus_set_fast_status(chip, CHARGER_STATUS_UNKNOWN);
+		complete_all(&chip->vooc_wait_bc12);
+		complete_all(&chip->icl_done_ack);
 		cancel_delayed_work_sync(&chip->vooc_switch_check_work);
+		chip->switch_retry_count = 0;
 	}
 }
 
@@ -4304,7 +4369,6 @@ static void oplus_vooc_gauge_subs_callback(struct mms_subscribe *subs,
 	struct oplus_chg_vooc *chip = subs->priv_data;
 	union mms_msg_data data = { 0 };
 	int rc;
-	int btb_abnormal_current;
 
 	switch (type) {
 	case MSG_TYPE_TIMER:
@@ -4357,26 +4421,7 @@ static void oplus_vooc_gauge_subs_callback(struct mms_subscribe *subs,
 			}
 			break;
 		case GAUGE_ITEM_SUB_BTB_STATE:
-			rc = oplus_mms_get_item_data(chip->gauge_topic, id,
-						     &data, false);
-			if (rc < 0) {
-				chg_err("can't get GAUGE_ITEM_SUB_BTB_STATE data, rc=%d\n",
-					 rc);
-			} else {
-				if (data.intval == BATT_BTB_STATE_NOT_CONNECT) {
-					btb_abnormal_current = oplus_gauge_get_sub_btb_curr_limit(chip->gauge_topic);
-					chg_debug("sub_btb_state = %d is abnormal, set limit current %d mA.\n",
-						  data.intval, btb_abnormal_current);
-					if (btb_abnormal_current > 0)
-						vote(chip->vooc_curr_votable, BAD_SUB_BTB_VOTER, true,
-						     btb_abnormal_current, false);
-				} else if (data.intval == BATT_BTB_STATE_CONNECT) {
-					vote(chip->vooc_curr_votable, BAD_SUB_BTB_VOTER, false,
-					     0, false);
-				} else {
-					chg_info("state[%d] is not support now!", data.intval);
-				}
-			}
+			oplus_vooc_sub_btb_connnect_check(chip);
 			break;
 		default:
 			break;
@@ -4762,6 +4807,13 @@ static void oplus_chg_vooc_err_handler_work(struct work_struct *work)
 	}
 }
 
+static void oplus_comm_charge_disable_clear_suspend_vote(struct oplus_chg_vooc *chip, bool disable)
+{
+	if (is_wired_charge_suspend_votable_available(chip) && !disable && !chip->fastchg_started)
+		vote(chip->wired_charge_suspend_votable, FASTCHG_VOTER, false,
+		     0, false);
+}
+
 static void oplus_comm_charge_disable_work(struct work_struct *work)
 {
 	struct oplus_chg_vooc *chip = container_of(work, struct oplus_chg_vooc,
@@ -4801,10 +4853,7 @@ static void oplus_comm_charge_disable_work(struct work_struct *work)
 		     0, false);
 	}
 
-	if (is_wired_charge_suspend_votable_available(chip) && !disable) {
-		vote(chip->wired_charge_suspend_votable, FASTCHG_VOTER, false,
-		     0, false);
-	}
+	oplus_comm_charge_disable_clear_suspend_vote(chip, disable);
 
 	vote(chip->vooc_disable_votable, USER_VOTER, disable, disable, false);
 

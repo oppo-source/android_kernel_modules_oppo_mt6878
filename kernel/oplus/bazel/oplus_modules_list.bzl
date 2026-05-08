@@ -141,6 +141,7 @@ COMMON_OPLUS_MODULES_LIST = [
     "//vendor/oplus/kernel/mm:oplus_bsp_kshrink_slabd",
     "//vendor/oplus/kernel/synchronize:oplus_locking_strategy",
     "//vendor/oplus/kernel/mm:oplus_bsp_zram_opt",
+    "//vendor/oplus/kernel/mm:oplus_bsp_fg_protect",
     "//vendor/oplus/kernel/synchronize:oplus_lock_torture",
     "//vendor/oplus/kernel/wifi:oplus_connectivity_routerboost",
     "//vendor/oplus/kernel/wifi:oplus_connectivity_sla",

@@ -19,6 +19,8 @@
 #include <linux/spinlock.h>
 #include <linux/pm_opp.h>
 #include <linux/regulator/consumer.h>
+#include <linux/dma-heap.h>
+#include <uapi/linux/dma-heap.h>
 #include <media/v4l2-event.h>
 #include <media/v4l2-mem2mem.h>
 #include <media/v4l2-ioctl.h>
@@ -1111,6 +1113,89 @@ static const struct vb2_ops mtk_jpeg_enc_qops = {
 	.stop_streaming     = mtk_jpeg_enc_stop_streaming,
 };
 
+static int mtk_jpeg_alloc_mem(struct mtk_jpeg_ctx *ctx, struct device *dev, struct jpeg_mem_obj *mem,
+				struct dma_buf_attachment **attach, struct sg_table **sgt)
+{
+	struct dma_heap *dma_heap;
+	struct dma_buf *dbuf;
+	unsigned int alloc_len;
+
+	alloc_len = mem->len;
+
+	mem->iova = 0;
+	if (dev == NULL) {
+		dev_err(ctx->jpeg->dev, "dev null\n");
+		return -EPERM;
+	}
+
+	if (mem->len == 0U) {
+		dev_err(ctx->jpeg->dev, "buffer len = %u invalid", mem->len);
+		return -EPERM;
+	}
+
+	dma_heap = dma_heap_find("mtk_mm");
+
+	if (!dma_heap) {
+		dev_err(ctx->jpeg->dev, "heap find fail\n");
+		return -EPERM;
+	}
+
+	dbuf = dma_heap_buffer_alloc(dma_heap, alloc_len,
+		O_RDWR | O_CLOEXEC, DMA_HEAP_VALID_HEAP_FLAGS);
+
+	if (IS_ERR_OR_NULL(dbuf)) {
+		dev_err(ctx->jpeg->dev, "buffer alloc fail\n");
+		return PTR_ERR(dbuf);
+	}
+
+	*attach = dma_buf_attach(dbuf, dev);
+	if (IS_ERR_OR_NULL(*attach)) {
+		dev_err(ctx->jpeg->dev, "attach fail, return\n");
+		dma_heap_buffer_free(dbuf);
+		return PTR_ERR(*attach);
+	}
+	*sgt = dma_buf_map_attachment(*attach, DMA_BIDIRECTIONAL);
+	if (IS_ERR_OR_NULL(*sgt)) {
+		dev_err(ctx->jpeg->dev, "map failed, detach and return\n");
+		dma_buf_detach(dbuf, *attach);
+		dma_heap_buffer_free(dbuf);
+		return PTR_ERR(*sgt);
+	}
+
+	mem->va = (u64)dbuf;
+	mem->pa = (u64)sg_dma_address((*sgt)->sgl);
+	mem->iova = (__u64)mem->pa;
+
+	if (mem->va == (u64)NULL || mem->pa == (u64)NULL) {
+		dev_err(ctx->jpeg->dev, "alloc failed, va 0x%llx pa 0x%llx iova 0x%llx len %d\n",
+		mem->va, mem->pa, mem->iova, mem->len);
+		return -EPERM;
+	}
+
+	pr_info("va 0x%llx pa 0x%llx iova 0x%llx len %d\n",
+		mem->va, mem->pa, mem->iova, mem->len);
+	return 0;
+}
+
+static int mtk_jpeg_free_mem(struct mtk_jpeg_ctx *ctx, struct jpeg_mem_obj *mem,
+				struct dma_buf_attachment *attach, struct sg_table *sgt)
+{
+	struct iosys_map map = IOSYS_MAP_INIT_VADDR(ctx->qtable.map_va);
+
+	if (mem == NULL || ctx->jpeg->dev == NULL || attach == NULL || sgt == NULL) {
+		dev_err(ctx->jpeg->dev, "Invalid arguments, mem=0x%lx, dev=0x%lx, attach=0x%lx, sgt=0x%lx",
+			(unsigned long)mem, (unsigned long)ctx->jpeg->dev, (unsigned long)attach, (unsigned long)sgt);
+		return -EINVAL;
+	}
+
+	dma_buf_unmap_attachment(attach, sgt, DMA_BIDIRECTIONAL);
+	dma_buf_detach((struct dma_buf *)mem->va, attach);
+	dma_buf_vunmap((struct dma_buf *)mem->va, &map);
+	dma_buf_end_cpu_access((struct dma_buf *)mem->va, DMA_TO_DEVICE);
+	dma_heap_buffer_free((struct dma_buf *)mem->va);
+	return 0;
+}
+
 static void mtk_jpeg_set_dec_src(struct mtk_jpeg_ctx *ctx,
 				 struct vb2_buffer *src_buf,
 				 struct mtk_jpeg_bs *bs)
@@ -1156,6 +1241,7 @@ static void mtk_jpeg_enc_device_run(void *priv)
 	enum vb2_buffer_state buf_state = VB2_BUF_STATE_ERROR;
 	unsigned long flags;
 	int ret;
+	int use_qtable = 0;
 
 	src_buf = v4l2_m2m_next_src_buf(ctx->fh.m2m_ctx);
 	dst_buf = v4l2_m2m_next_dst_buf(ctx->fh.m2m_ctx);
@@ -1179,6 +1265,28 @@ static void mtk_jpeg_enc_device_run(void *priv)
 	schedule_delayed_work(&jpeg->job_timeout_work,
 			      msecs_to_jiffies(MTK_JPEG_HW_TIMEOUT_MSEC));
 
+	if (ctx->enc_quality == 100) {
+		ctx->enable_q_table = 1;
+		pr_info("use max quality q table\n");
+	}
+
+	if (ctx->enable_q_table) {
+		ctx->qtable.buf_att = NULL;
+		ctx->qtable.sgt = NULL;
+		ctx->qtable.len = QTABLE_LEN;
+		ret = mtk_jpeg_alloc_mem(ctx, ctx->jpeg->smmu_dev, &ctx->qtable, &ctx->qtable.buf_att, &ctx->qtable.sgt);
+
+		if (ret >= 0) {
+			mtk_jpeg_crate_q_table(ctx);
+			dma_sync_sg_for_device(ctx->jpeg->smmu_dev,
+				ctx->qtable.sgt->sgl, ctx->qtable.sgt->orig_nents, DMA_TO_DEVICE);
+			use_qtable = 1;
+		} else {
+			dev_err(ctx->jpeg->dev, "qtable create fail %d\n", ret);
+			ctx->enable_q_table = -1;
+		}
+	}
+
 	spin_lock_irqsave(&jpeg->hw_lock, flags);
 
 	/*
@@ -1191,6 +1299,10 @@ static void mtk_jpeg_enc_device_run(void *priv)
 	mtk_jpeg_set_enc_src(ctx, jpeg->reg_base, &src_buf->vb2_buf);
 	mtk_jpeg_set_enc_dst(ctx, jpeg->reg_base, &dst_buf->vb2_buf);
 	mtk_jpeg_set_enc_params(ctx, jpeg->reg_base);
+
+	if (use_qtable)
+		mtk_set_q_table(ctx, jpeg->reg_base);
+
 	mtk_jpeg_enc_start(jpeg->reg_base);
 	ctx->state = MTK_JPEG_RUNNING;
 	spin_unlock_irqrestore(&jpeg->hw_lock, flags);
@@ -1591,6 +1703,12 @@ static int mtk_jpeg_release(struct file *file)
 // #endif
 	}
 	mutex_lock(&jpeg->lock);
+
+	if (ctx->enable_q_table) {
+		mtk_jpeg_free_mem(ctx, &ctx->qtable, ctx->qtable.buf_att, ctx->qtable.sgt);
+		ctx->enable_q_table = 0;
+	}
+
 	v4l2_m2m_ctx_release(ctx->fh.m2m_ctx);
 	v4l2_ctrl_handler_free(&ctx->ctrl_hdl);
 	v4l2_fh_del(&ctx->fh);
@@ -1996,4 +2114,5 @@ static struct platform_driver mtk_jpeg_driver = {
 module_platform_driver(mtk_jpeg_driver);
 
 MODULE_DESCRIPTION("MediaTek JPEG codec driver");
+MODULE_IMPORT_NS(DMA_BUF);
 MODULE_LICENSE("GPL v2");

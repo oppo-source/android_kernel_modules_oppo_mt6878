@@ -16,6 +16,7 @@
 #include <linux/processor.h>
 #include <linux/kobject.h>
 #include <linux/module.h>
+#include <linux/mutex.h>
 #include <linux/moduleparam.h>
 #include <linux/spinlock.h>
 #include <trace/events/sched.h>
@@ -83,6 +84,7 @@ static unsigned int dt;
 static int prev_freq[CPU_NUM] = {-1};
 static int prev_freq_min[CPU_NUM] = {-1};
 static int prev_freq_max[CPU_NUM] = {-1};
+static DEFINE_MUTEX(tids_mutex);
 
 #define MAX_UEVENT_PARAM 4
 static struct kobject *sched_kobj;
@@ -657,14 +659,16 @@ static int proc_tids_set_show(struct seq_file *m, void *v)
 	if (!task_sched_info_enable)
 		return -EFAULT;
 
+	mutex_lock(&tids_mutex);
 	seq_printf(m, "%llu ", write_tid_time);
 
-	while (i < target_tids_num) {
+	while (i < target_tids_num && i < MAX_TID_NUM) {
 		seq_printf(m, "%d ", target_tids[i]);
 		i++;
 	}
 	seq_printf(m, "\n");
 
+	mutex_unlock(&tids_mutex);
 	return 0;
 }
 
@@ -684,14 +688,17 @@ static ssize_t proc_tids_set_write(struct file *file, const char __user *buf, si
 	if (!task_sched_info_enable)
 		return -EFAULT;
 
+	mutex_lock(&tids_mutex);
 	memset(buffer, 0, sizeof(buffer));
 
 	if (count > sizeof(buffer) - 1) {
 		count = sizeof(buffer) - 1;
 	}
 
-	if (copy_from_user(buffer, buf, count))
+	if (copy_from_user(buffer, buf, count)) {
+		mutex_unlock(&tids_mutex);
 		return -EFAULT;
+	}
 
 	all = buffer;
 
@@ -710,7 +717,7 @@ static ssize_t proc_tids_set_write(struct file *file, const char __user *buf, si
 	ktime_get_real_ts64(&ts);
 	write_tid_time = (u64)ts.tv_sec * 1000000 + (u64)(ts.tv_nsec/1000);
 
-
+	mutex_unlock(&tids_mutex);
 	return count;
 }
 

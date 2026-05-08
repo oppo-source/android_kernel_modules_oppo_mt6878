@@ -72,6 +72,7 @@
 #define JPEG_ENC_DCM_CTRL		0x300
 #define JPEG_ENC_CODEC_SEL		0x314
 #define JPEG_ENC_ULTRA_THRES		0x318
+#define JPEG_ENC_Q_TBL_ADDR     0x404
 #define JPGENC_AFBC_CONFIG_0    0x544
 
 #define JPEG_ENC_SRC_LUMA_ADDR_EXT      0x584
@@ -84,6 +85,7 @@
 #define JPEG_ENC_CTRL_RDMA_RIGHT_PADDING_EN     (1 << 29)
 #define JPEG_ENC_CTRL_RDMA_PADDING_0_EN         (1 << 30)
 
+#define QTABLE_LEN 384
 
 /**
  * struct mtk_jpeg_enc_qlt - JPEG encoder quality data
@@ -105,5 +107,7 @@ void mtk_jpeg_set_enc_src(struct mtk_jpeg_ctx *ctx,  void __iomem *base,
 void mtk_jpeg_set_enc_dst(struct mtk_jpeg_ctx *ctx, void __iomem *base,
 			  struct vb2_buffer *dst_buf);
 void mtk_jpeg_set_enc_params(struct mtk_jpeg_ctx *ctx,  void __iomem *base);
+void mtk_jpeg_crate_q_table(struct mtk_jpeg_ctx *ctx);
+void mtk_set_q_table(struct mtk_jpeg_ctx *ctx, void __iomem *base);
 
 #endif /* _MTK_JPEG_ENC_HW_H */

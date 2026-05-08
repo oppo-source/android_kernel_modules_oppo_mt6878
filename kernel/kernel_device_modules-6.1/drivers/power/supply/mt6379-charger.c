@@ -53,6 +53,7 @@
 #define MT6379_BC12_RETRY_CNT	3
 #endif /* OPLUS_FEATURE_CHG_BASIC */
 
+bool g_support_icl_optimization = false;
 struct mt6379_charger_data *oplus_cdata;
 bool is_mtksvooc_project = false;
 static int mt6379_charger_enable_bc12(struct mt6379_charger_data *cdata, bool en);
@@ -2849,7 +2850,13 @@ static int mt6379_charger_apply_pdata(struct mt6379_charger_data *cdata)
 
 		val = pdata_get_val(dev_get_platdata(cdata->dev), dp);
 		dev_info(cdata->dev, "%s, dp-name = %s, val = %d\n", __func__, dp->name, val);
-
+#ifdef OPLUS_FEATURE_CHG_BASIC
+		if (g_support_icl_optimization &&
+		   (strncmp(dp->name, "aicr", 4) == 0)) {
+			dev_err(cdata->dev, "dont set icl, keep icl setting in lk\n");
+			continue;
+		}
+#endif
 		ret = mt6379_charger_field_set(cdata, dp->field, val);
 		if (ret == -EOPNOTSUPP) {
 			dev_info(cdata->dev, "%s, dp-name = %s not support\n", __func__, dp->name);
@@ -4181,6 +4188,8 @@ static int mt6379_charger_probe(struct platform_device *pdev)
 #ifdef OPLUS_FEATURE_CHG_BASIC
 	oplus_cdata = cdata;
 	is_mtksvooc_project = true;
+	g_support_icl_optimization = of_property_read_bool(dev->of_node, "support_icl_optimization");
+	dev_info(dev, "%s: support_icl_optimization=%d\n", __func__, g_support_icl_optimization);
 #endif
 
 	if (pdev->dev.of_node)

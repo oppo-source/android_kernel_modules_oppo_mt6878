@@ -87,4 +87,3 @@ config OPLUS_FEATURE_GAUGE_KPOC_OPS
         help
           Say Y here to declare MTK GAUGE KPOC support
           Applicable to kernel version >= 6.12
-

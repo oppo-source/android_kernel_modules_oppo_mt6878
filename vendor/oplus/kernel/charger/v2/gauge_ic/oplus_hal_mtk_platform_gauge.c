@@ -250,7 +250,11 @@ static struct mtk_battery* oplus_gauge_get_mtk_battery(void)
 			psy = power_supply_get_by_name("mt6379-gauge1");
 			if (psy == NULL) {
 				chg_err("6379 psy is not rdy\n");
-				return NULL;
+				psy = power_supply_get_by_name("mtk-gauge");
+				if (psy == NULL) {
+					chg_err("psy is not rdy\n");
+					return NULL;
+				}
 			}
 		}
 #else

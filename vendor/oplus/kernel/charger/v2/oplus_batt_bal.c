@@ -967,7 +967,6 @@ static int oplus_batt_bal_status_record(struct oplus_batt_bal_chip *chip)
 	int index = 0;
 	int pmos_status = oplus_batt_bal_get_pmos_enable(chip);
 	int hw_status = oplus_batt_bal_get_enable(chip);
-	bool supplementary_power_mos_status = oplus_wired_get_supplementary_power_mos();
 
 	index += snprintf(&(chip->status_record[index]), BATT_BAL_STATUS_RECORD_LEN - index,
 		"pmos_status=%d;hw_status=%d;dir_flow=%s;target_iref=%d;",
@@ -976,9 +975,9 @@ static int oplus_batt_bal_status_record(struct oplus_batt_bal_chip *chip)
 		"b1_vol=%d;b2_vol=%d;b1_curr=%d;b2_curr=%d;",
 		chip->b1_volt, chip->b2_volt, chip->b1_curr, chip->b2_curr);
 	index += snprintf(&(chip->status_record[index]), BATT_BAL_STATUS_RECORD_LEN - index,
-		"vbatt_diff=%d;cbatt_diff=%d;state_machine=%d;abnormal_state=%d supplementary_mos=%d\n",
+		"vbatt_diff=%d;cbatt_diff=%d;state_machine=%d;abnormal_state=%d\n",
 		chip->b2_volt - chip->b1_volt, (chip->b2_curr - chip->b1_curr) / 2,
-		chip->curr_bal_state, chip->abnormal_state, supplementary_power_mos_status);
+		chip->curr_bal_state, chip->abnormal_state);
 
 	chg_debug("index=%d\n", index);
 

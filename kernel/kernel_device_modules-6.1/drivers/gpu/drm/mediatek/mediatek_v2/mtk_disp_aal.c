@@ -61,6 +61,7 @@ static int mtk_aal_sof_irq_trigger(void *data);
 
 #ifdef OPLUS_FEATURE_DISPLAY
 extern bool g_aal_probe_ready;
+static int g_dre_firston_support = 0;
 #endif
 
 enum AAL_UPDATE_HIST {
@@ -4869,6 +4870,13 @@ static int mtk_disp_aal_probe(struct platform_device *pdev)
 		priv->primary_data->aal_fo->mtk_aal_support = 0;
 	}
 
+	if (of_property_read_u32(dev->of_node, "oplus_open_dre",
+		&g_dre_firston_support)) {
+		AALERR("comp_id: %d, oplus_open_dre = %d\n",
+			comp_id, g_dre_firston_support);
+		g_dre_firston_support = 0;
+	}
+
 	if (of_property_read_u32(dev->of_node, "mtk-dre30-support",
 		&priv->primary_data->aal_fo->mtk_dre30_support)) {
 		AALERR("comp_id: %d, mtk_dre30_support = %d\n",
@@ -4969,7 +4977,11 @@ static int mtk_disp_aal_probe(struct platform_device *pdev)
 	}
 
 #ifdef OPLUS_FEATURE_DISPLAY
-        g_aal_probe_ready = true;
+	g_aal_probe_ready = true;
+	if (g_dre_firston_support) {
+		printk("%s,disp_aal_set_dre_en\n", __func__);
+		disp_aal_set_dre_en(&priv->ddp_comp, true);
+	}
 #endif
 
 	AALFLOW_LOG("-\n");

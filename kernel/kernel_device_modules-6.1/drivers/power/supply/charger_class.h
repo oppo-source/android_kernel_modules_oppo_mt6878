@@ -214,6 +214,7 @@ struct charger_ops {
 			    union charger_propval *val);
 #ifdef OPLUS_FEATURE_CHG_BASIC
 	int (*enable_ship_mode)(struct charger_device *dev);
+	int (*set_pr_swap_state)(struct charger_device *chg_dev, bool state);
 #endif
 
 };
@@ -405,6 +406,7 @@ extern int charger_dev_enable_hidden_mode(struct charger_device *dev, bool en);
 #ifdef OPLUS_FEATURE_CHG_BASIC
 extern int charger_dev_enable_ship_mode(struct charger_device *charger_dev);
 extern int charger_dev_set_boost_voltage_limit(struct charger_device *chg_dev, u32 uv);
+extern int charger_dev_set_pr_swap_state(struct charger_device *chg_dev, bool state);
 #endif
 
 extern int register_charger_device_notifier(

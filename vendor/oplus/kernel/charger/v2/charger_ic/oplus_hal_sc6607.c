@@ -3414,6 +3414,8 @@ static int oplus_sc6607_request_otg_on(struct sc6607 *chip, int index)
 	}
 
 	sc6607_disable_charger(chip);
+	sc6607_field_write(chip, F_DIS_SLEEP_FOR_OTG, true);
+	msleep(5);
 	ret = sc6607_enable_otg(chip);
 	if (ret < 0) {
 		chg_err("enable otg fail:%d\n", ret);
@@ -3491,6 +3493,9 @@ static int oplus_sc6607_enable_otg(struct sc6607 *chip)
 	if (atomic_read(&chip->driver_suspended))
 		return 0;
 
+	sc6607_field_write(chip, F_ACDRV_MANUAL_EN, 1);
+	sc6607_field_write(chip, F_ACDRV_EN, 0);
+	msleep(5);
 	ret = oplus_sc6607_request_otg_on(chip, BOOST_ON_OTG);
 	if (ret > 0) {
 		sc6607_field_write(chip, F_QB_EN, 1);
@@ -4861,6 +4866,17 @@ static void sc6607_subscribe_comm_topic(struct oplus_mms *topic, void *prv_data)
 	}
 }
 
+static void sc6607_subscribe_wired_topic(struct oplus_mms *topic,
+					   void *prv_data)
+{
+	struct sc6607 *chip = prv_data;
+	/* waiting for wired initial and report bc12-complete, needn't callback */
+	if (chip->oplus_chg_type != POWER_SUPPLY_TYPE_UNKNOWN) {
+		chg_info("report bc12 complete again\n");
+		oplus_chg_ic_virq_trigger(chip->ic_dev, OPLUS_IC_VIRQ_BC12_COMPLETED);
+	}
+}
+
 #ifdef CONFIG_OPLUS_CHARGER_MTK
 static struct charger_ops sc6607_chg_ops = {
 	.plug_in = sc6607_plug_in,
@@ -5239,6 +5255,7 @@ static int sc6607_buck_probe(struct i2c_client *client, const struct i2c_device_
 	INIT_DELAYED_WORK(&chip->sourcecap_done_work, oplus_sourcecap_done_work);
 	INIT_DELAYED_WORK(&chip->charger_suspend_recovery_work, oplus_charger_suspend_recovery_work);
 	oplus_mms_wait_topic("common", sc6607_subscribe_comm_topic, chip);
+	oplus_mms_wait_topic("wired", sc6607_subscribe_wired_topic, chip);
 	chg_info("end!\n");
 	return 0;
 

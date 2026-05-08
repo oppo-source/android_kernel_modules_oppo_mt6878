@@ -31,7 +31,7 @@
 #if IS_ENABLED(CONFIG_OPLUS_FEATURE_ABNORMAL_FLAG)
 #include <../kernel/oplus_cpu/oplus_overload/task_overload.h>
 #endif
-#if IS_ENABLED(CONFIG_OPLUS_FEATURE_SCHED_ASSIST)
+#if IS_ENABLED(CONFIG_OPLUS_CPU_SKIP_ROTATION)
 #include <../kernel/oplus_cpu/sched/sched_assist/sa_common.h>
 #endif
 
@@ -237,6 +237,11 @@ void task_check_for_rotation(struct rq *src_rq)
 		if (!READ_ONCE(rq->misfit_task_load) ||
 			(READ_ONCE(rq->curr->policy) != SCHED_NORMAL))
 			continue;
+
+		#if IS_ENABLED(CONFIG_OPLUS_CPU_SKIP_ROTATION)
+		if (test_task_ux(rq->curr))
+			continue;
+		#endif
 
 		if (is_reserved(i))
 			continue;

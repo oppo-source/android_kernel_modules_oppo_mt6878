@@ -509,6 +509,15 @@ bootargs_ext = "8250.nr_uarts=4";
 &mddriver {
     ref_args = "md_disable";
 };
+
+&soc {
+	//#ifdef CONFIG_OPLUS_BINDER_STRATEGY
+	oplus_binder_sched {
+		thread_full_boost_task = <1>;
+	};
+	//#endif
+};
+
 #include "mediatek/cust_k6897_connfem.dtsi"
 #include "mediatek/oplus_tp_24921.dtsi"
 #include "mediatek/oplus_tp_24921_firmware.dtsi"

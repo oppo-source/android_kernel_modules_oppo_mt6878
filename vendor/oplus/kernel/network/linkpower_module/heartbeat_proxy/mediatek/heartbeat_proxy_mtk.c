@@ -14,7 +14,9 @@
 #include <net/genetlink.h>
 #include <net/inet_hashtables.h>
 #include <net/inet6_hashtables.h>
+#if defined MTK_CCCI_DEVICES
 #include <mtk_ccci_common.h>
+#endif
 #include "mipc_msg.h"
 #include "mipc_msg_tlv_api.h"
 #include "mipc_msg_tlv_const.h"

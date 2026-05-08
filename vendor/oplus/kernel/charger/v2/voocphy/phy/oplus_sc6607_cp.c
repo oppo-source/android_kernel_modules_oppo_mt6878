@@ -1814,26 +1814,6 @@ static int sc6607_cp_get_work_status(struct oplus_chg_ic_dev *ic_dev, bool *star
 	return 0;
 }
 
-static int sc6607_cp_adc_enable(struct oplus_chg_ic_dev *ic_dev, bool en)
-{
-	struct sc6607 *chip;
-	int rc;
-
-	if (ic_dev == NULL) {
-		chg_err("oplus_chg_ic_dev is NULL");
-		return -ENODEV;
-	}
-	chip = oplus_chg_ic_get_priv_data(ic_dev);
-
-	rc = sc6607_field_write(chip, F_ADC_EN, en);
-	if (rc < 0) {
-		chg_err("read F_ADC_EN error, rc=%d\n", rc);
-		return rc;
-	}
-
-	return 0;
-}
-
 static int sc6607_cp_watchdog_reset(struct oplus_chg_ic_dev *ic_dev)
 {
 	struct sc6607 *chip;
@@ -1951,9 +1931,6 @@ static void *sc6607_cp_get_func(struct oplus_chg_ic_dev *ic_dev, enum oplus_chg_
 		break;
 	case OPLUS_IC_FUNC_CP_GET_WORK_STATUS:
 		func = OPLUS_CHG_IC_FUNC_CHECK(OPLUS_IC_FUNC_CP_GET_WORK_STATUS, sc6607_cp_get_work_status);
-		break;
-	case OPLUS_IC_FUNC_CP_SET_ADC_ENABLE:
-		func = OPLUS_CHG_IC_FUNC_CHECK(OPLUS_IC_FUNC_CP_SET_ADC_ENABLE, sc6607_cp_adc_enable);
 		break;
 	case OPLUS_IC_FUNC_CP_WATCHDOG_RESET:
 		func = OPLUS_CHG_IC_FUNC_CHECK(OPLUS_IC_FUNC_CP_WATCHDOG_RESET, sc6607_cp_watchdog_reset);

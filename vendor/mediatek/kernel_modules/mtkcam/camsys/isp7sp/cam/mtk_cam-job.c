@@ -401,6 +401,12 @@ static int mtk_cam_job_pack_init(struct mtk_cam_job *job,
 	atomic_set(&job->refs, 1);
 	INIT_LIST_HEAD(&job->list);
 
+	/* put at job->req clean */
+	if (job->req) {
+		dev_info(dev, "%s job#%d %s might be leaked\n", __func__,
+			 job->req_seq, job->req->debug_str);
+	}
+	media_request_get(&req->req);
 	job->req = req;
 	job->src_ctx = ctx;
 	job->img_wbuf_pool_wrapper = NULL;
@@ -3095,6 +3101,11 @@ static void job_finalize(struct mtk_cam_job *job)
 
 	mtk_cam_buffer_pool_return(&job->cq);
 	mtk_cam_buffer_pool_return(&job->ipi);
+
+	if (job->req) {
+		media_request_put(&job->req->req);
+		job->req = NULL;
+	}
 }
 
 static void update_mstream_ufd_offset(struct mtk_cam_pool_buffer *fir_ipi,

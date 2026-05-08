@@ -464,11 +464,22 @@ bool is_Chrome_project(void)
 	}
 }
 
+bool is_Dunhuang_project(void)
+{
+	int prj_id = get_project();
+
+	if (prj_id == 24921 || prj_id == 24922 || prj_id == 24971 || prj_id == 24972) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
 bool setbrightness_force_file(void)
 {
 #ifdef OPLUS_FEATURE_DISPLAY_APOLLO
 	if (oplus_apollo_unsupported() &&
-		(is_BaikalM_project() || is_GreenLand_project() || is_Chrome_project())) {
+		(is_BaikalM_project() || is_GreenLand_project() || is_Chrome_project() || is_Dunhuang_project())) {
 		return 1;
 	}
 #endif

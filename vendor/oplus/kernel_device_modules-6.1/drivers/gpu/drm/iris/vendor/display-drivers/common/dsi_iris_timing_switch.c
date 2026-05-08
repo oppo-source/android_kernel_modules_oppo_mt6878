@@ -1061,11 +1061,18 @@ int iris_switch_mtk(void *handle, void *dev, int id)
 int iris_switch_fps_with_vfp(void *handle, void *dev, int id)
 {
 	int ret = -EINVAL;
+	struct iris_vendor_cfg *pcfg_ven = iris_get_vendor_cfg();
 	bool cur_mode = iris_is_pt_mode(false);
-	if (cur_mode)
+
+	if (!pcfg_ven || !pcfg_ven->panel_ext || !pcfg_ven->panel_ext->params) {
+		IRIS_LOGE("%s(), invalid params!", __func__);
+		return -EINVAL;
+	}
+
+	if (cur_mode && pcfg_ven->panel_ext->params->change_fps_by_vfp_send_cmd_need_delay)
 		iris_vdo_mode_send_cmd_pre(handle);
 	ret = iris_switch_mtk(handle, dev, id);
-	if (cur_mode)
+	if (cur_mode && pcfg_ven->panel_ext->params->change_fps_by_vfp_send_cmd_need_delay)
 		iris_vdo_mode_send_cmd_post(handle);
 
 	return ret;

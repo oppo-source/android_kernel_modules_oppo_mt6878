@@ -261,7 +261,7 @@ struct mtk_cam_device {
 	struct v4l2_device v4l2_dev;
 	struct v4l2_async_notifier notifier;
 	struct media_device media_dev;
-
+	atomic_t req_cnt;
 	atomic_t initialize_cnt;
 
 	//TODO: for real SCP

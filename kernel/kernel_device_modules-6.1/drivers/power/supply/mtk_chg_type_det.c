@@ -172,6 +172,7 @@ static int pd_tcp_notifier_call(struct notifier_block *nb,
 		old_state = noti->typec_state.old_state;
 		new_state = noti->typec_state.new_state;
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
 		if (old_state == TYPEC_UNATTACHED &&
 			new_state != TYPEC_UNATTACHED) {
 			tcpm_set_usb_dpdm_pull_low(mci->tcpc[idx], false);
@@ -179,9 +180,16 @@ static int pd_tcp_notifier_call(struct notifier_block *nb,
 		} else if (old_state != TYPEC_UNATTACHED &&
 				new_state == TYPEC_UNATTACHED) {
 			tcpm_set_usb_dpdm_pull_low(mci->tcpc[idx], true);
+			if (!mci->chg_shared[idx])
+				charger_dev_set_pr_swap_state(mci->chg_dev[idx], false);
 			dev_info(mci->dev, "%s set usb dpdm pull low\n", __func__);
+		} else if (old_state == TYPEC_ATTACHED_SNK && new_state == TYPEC_ATTACHED_SRC) {
+			if (!mci->chg_shared[idx]) {
+				charger_dev_set_pr_swap_state(mci->chg_dev[idx], true);
+				dev_info(mci->dev, "%s set pr swap true\n", __func__);
+			}
 		}
-
+#endif
 		if (old_state == TYPEC_UNATTACHED &&
 		    (new_state == TYPEC_ATTACHED_SNK ||
 		     new_state == TYPEC_ATTACHED_NORP_SRC ||

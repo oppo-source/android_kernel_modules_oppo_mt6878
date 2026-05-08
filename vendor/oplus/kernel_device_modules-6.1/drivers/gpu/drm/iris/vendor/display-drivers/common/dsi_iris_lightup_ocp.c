@@ -128,7 +128,7 @@ int iris_wait_for_bypass_cmdq_done(void)
 	struct iris_cfg *pcfg = iris_get_cfg();
 	int const timeout = msecs_to_jiffies(500);
 
-	if (pcfg->valid < PARAM_LIGHTUP)
+	if (pcfg->valid < PARAM_LIGHTUP || pcfg->tx_mode == IRIS_CMD_MODE)
 		return 0;
 
 	reinit_completion(&pcfg->abyp_ctrl.bypass_switch);

@@ -18,6 +18,7 @@
 #include <linux/debugfs.h>
 #include <linux/minmax.h>
 #include <linux/dma-mapping.h>
+#include <uapi/linux/sched/types.h>
 #include <mtk-smmu-v3.h>
 
 #include <soc/mediatek/mmdvfs_v3.h>
@@ -116,6 +117,7 @@ struct mml_dev {
 	struct cmdq_base *cmdq_base;
 	struct cmdq_client *cmdq_clts[MML_MAX_CMDQ_CLTS];
 	u8 cmdq_clt_cnt;
+	struct kthread_worker *kt_workers[mml_kt_total];
 
 	atomic_t drm_cnt;
 	struct mml_drm_ctx *drm_ctx;
@@ -166,6 +168,12 @@ struct mml_dev {
 
 	struct device *mmu_dev; /* for dmabuf to iova */
 	struct device *mmu_dev_sec; /* for secure dmabuf to secure iova */
+};
+
+static const char *mml_kt_name[mml_kt_total] = {
+	[mml_kt_taskdone]	= "mml_taskdone",
+	[mml_kt_config0]	= "mml_work0",
+	[mml_kt_config1]	= "mml_work1",
 };
 
 struct platform_device *mml_get_plat_device(struct platform_device *pdev)
@@ -435,6 +443,11 @@ void mml_dev_put_dle_ctx(struct mml_dev *mml,
 		ctx_release(ctx);
 
 	WARN_ON(cnt < 0);
+}
+
+struct kthread_worker *mml_dev_get_kt_worker(struct mml_dev *mml, enum mml_kt kt_id)
+{
+	return mml->kt_workers[kt_id];
 }
 
 struct mml_topology_cache *mml_topology_get_cache(struct mml_dev *mml)
@@ -1698,6 +1711,24 @@ static const struct component_ops sys_comp_ops = {
 	.unbind = sys_unbind,
 };
 
+static struct kthread_worker *mml_worker_create(const char *name)
+{
+	struct kthread_worker *kt;
+
+	kt = kthread_create_worker(0, "%s", name);
+	if (IS_ERR(kt)) {
+		/* create thread fail */
+		mml_log("%s create thread %s fail %pe", __func__, name, kt);
+	} else {
+		struct sched_param kt_param = { .sched_priority = 1 };
+		int ret = sched_setscheduler(kt->task, SCHED_FIFO, &kt_param);
+
+		mml_log("%s thread %s result %d", __func__, name, ret);
+	}
+
+	return kt;
+}
+
 static bool dbg_probed;
 static int mml_probe(struct platform_device *pdev)
 {
@@ -1798,6 +1829,9 @@ static int mml_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, mml);
 	dbg_probed = true;
 
+	for (i = 0; i < ARRAY_SIZE(mml->kt_workers); i++)
+		mml->kt_workers[i] = mml_worker_create(mml_kt_name[i]);
+
 	ret = comp_master_init(dev, mml);
 	if (unlikely(ret)) {
 		dev_err(dev, "failed to initialize mml component master\n");
@@ -1840,6 +1874,15 @@ static int mml_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct mml_dev *mml = platform_get_drvdata(pdev);
+	u32 i;
+
+	for (i = 0; i < ARRAY_SIZE(mml->kt_workers); i++) {
+		if (!mml->kt_workers[i])
+			continue;
+		if (!IS_ERR(mml->kt_workers[i]))
+			kthread_destroy_worker(mml->kt_workers[i]);
+		mml->kt_workers[i] = NULL;
+	}
 
 	wakeup_source_unregister(mml->wake_lock);
 	comp_master_deinit(dev);

@@ -58,6 +58,9 @@ static bool dbg_log_en;
 #endif
 struct mt6375_chg_data *oplus_ddata;
 bool is_mtksvooc_project = false;
+#ifdef OPLUS_FEATURE_CHG_BASIC
+bool g_support_icl_optimization = false;
+#endif
 module_param(dbg_log_en, bool, 0644);
 #define mt_dbg(dev, fmt, ...) \
 	do { \
@@ -66,7 +69,6 @@ module_param(dbg_log_en, bool, 0644);
 	} while (0)
 #define PHY_MODE_BC11_SET 1
 #define PHY_MODE_BC11_CLR 2
-
 #define M_TO_U(val)	((val) * 1000)
 #define U_TO_M(val)	((val) / 1000)
 
@@ -146,6 +148,7 @@ module_param(dbg_log_en, bool, 0644);
 
 #ifdef OPLUS_FEATURE_CHG_BASIC
 static int mt6375_set_ship_mode(struct charger_device *chgdev);
+static int mt6375_set_pr_swap_state(struct charger_device *chgdev, bool state);
 static int detach_count = 0;
 #define DETACH_MAX 2
 #define OPLUS_CHRD_UV_THD 2600
@@ -357,6 +360,7 @@ struct mt6375_chg_data {
 	bool wd0_status;
 /* oplus add for bc12 detecting after ovp on */
 	bool pdvbus_ovp_status;
+	bool pr_swap_state;
 #endif
 	unsigned int detach_irq;
 
@@ -1081,25 +1085,36 @@ static void mt6375_chg_attach_pre_process(struct mt6375_chg_data *ddata,
 
 	mt_dbg(ddata->dev, "trig=%s,attach=0x%x\n",
 	       mt6375_attach_trig_names[trig], attach);
+#ifndef OPLUS_FEATURE_CHG_BASIC
 	/* if attach trigger is not match, ignore it */
 	if (pdata->attach_trig != trig) {
 		mt_dbg(ddata->dev, "trig=%s ignored\n",
 		       mt6375_attach_trig_names[trig]);
 		return;
 	}
+#endif
 	attach = ONLINE_GET_ATTACH(attach);
-
 #ifdef CONFIG_OPLUS_HVDCP_SUPPORT
-	mutex_lock(&ddata->detach_count_lock);
-	if (attach == 0)
-		detach_count++;
-
 	if (attach == 0)
 		ret = mt6375_reset_hvdcp_reg(ddata, false);
 	else
 		ret = mt6375_reset_hvdcp_reg(ddata, true);
 	if (ret < 0)
 		mt_dbg(ddata->dev, "%s: fail to write hvdcp_device_type\n", __func__);
+#endif
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	/* if attach trigger is not match, ignore it */
+	if (pdata->attach_trig != trig) {
+		mt_dbg(ddata->dev, "trig=%s ignored\n",
+		       mt6375_attach_trig_names[trig]);
+		return;
+	}
+#endif
+
+#ifdef CONFIG_OPLUS_HVDCP_SUPPORT
+	mutex_lock(&ddata->detach_count_lock);
+	if (attach == 0)
+		detach_count++;
 
 	if (!attach && (detach_count < DETACH_MAX)) {
 		cancel_delayed_work_sync(&ddata->hvdcp_work);
@@ -1292,6 +1307,7 @@ enable_hvdcp:
 		printk(" %s: start hvdcp_result_check_work\n", __func__);
 	} else {
 		printk("HVDCP retry bc12 get result is not DCP!\n");
+		mt6375_chg_enable_bc12(oplus_ddata, false);
 	}
 
 	oplus_ddata->oplus_get_hvdcp_bc12_result = false;
@@ -2967,6 +2983,7 @@ static const struct charger_ops mt6375_chg_ops = {
 
 #ifdef OPLUS_FEATURE_CHG_BASIC
 	.enable_ship_mode = mt6375_set_ship_mode,
+	.set_pr_swap_state = mt6375_set_pr_swap_state,
 #endif
 	/* TypeC */
 	.enable_usbid = mt6375_enable_usbid,
@@ -3069,6 +3086,11 @@ int mt6375_reset_hvdcp_reg(struct mt6375_chg_data *ddata, bool en)
 	if (!ddata)
 		return -EINVAL;
 
+//if pr_swap, ignore set manual mode
+	if (en == false && ddata->pr_swap_state)  {
+		pr_info("ignore manual mode\n");
+		en = true;
+	}
 //if charger not attached, set HVDCP as manual mode, or set as normal mode
 	if (en) {
 		regmap_update_bits(ddata->rmap, MT6375_REG_DPDM_CTRL1, 0xff, 0x00);
@@ -3392,6 +3414,13 @@ static int mt6375_chg_apply_dt(struct mt6375_chg_data *ddata)
 		if (dp->field >= F_MAX)
 			continue;
 		val = pdata_get_val(dev_get_platdata(ddata->dev), dp);
+#ifdef OPLUS_FEATURE_CHG_BASIC
+		if (g_support_icl_optimization &&
+		   (strncmp(dp->name, "aicr", 4) == 0)) {
+			dev_err(ddata->dev, "dont set icl, keep icl setting in lk\n");
+			continue;
+		}
+#endif
 		ret = mt6375_chg_field_set(ddata, dp->field, val);
 		if (ret < 0) {
 			dev_err(ddata->dev, "failed to write dtprop %s\n",
@@ -3799,6 +3828,17 @@ bool mt6375_int_chrdet_attach(void)
 	}
 }
 EXPORT_SYMBOL(mt6375_int_chrdet_attach);
+
+static int mt6375_set_pr_swap_state(struct charger_device *chgdev, bool state)
+{
+	struct mt6375_chg_data *ddata = charger_get_data(chgdev);
+
+	if (!ddata)
+		return -EINVAL;
+
+	ddata->pr_swap_state = state;
+	return 0;
+}
 #endif
 
 static ssize_t shipping_mode_store(struct device *dev,
@@ -3848,6 +3888,11 @@ static int mt6375_chg_probe(struct platform_device *pdev)
 			return PTR_ERR(ddata->rmap_fields[i]);
 		}
 	}
+
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	g_support_icl_optimization = of_property_read_bool(dev->of_node, "support_icl_optimization");
+	dev_info(dev, "%s: support_icl_optimization=%d\n", __func__, g_support_icl_optimization);
+#endif
 
 	ret = mt6375_chg_get_pdata(dev);
 	if (ret < 0) {

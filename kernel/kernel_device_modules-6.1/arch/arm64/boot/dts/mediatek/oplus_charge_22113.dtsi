@@ -475,9 +475,16 @@
 		};
 	};
 };
+
+&mt6375_chg {
+	support_icl_optimization;
+};
+
 &lk_charger {
+	support_icl_optimization;
 	charger_by_bidirection;
 	is_support_mt6375;
+	support_chg_time_cnt;
 	support_external_gauge_bq28z610;
 	support_tuv_authentication;
 	support_hot_enter_kpoc;
@@ -532,6 +539,7 @@
 		compatible = "oplus,plc_charge";
 		oplus,plc_support = <CHG_PROTOCOL_UFCS>;
 		oplus,plc_soc = <90>;
+		oplus,plc_support_timeout;
 		oplus,plc_strategy-data = <&buck_simple_strategy>;
 		oplus,plc_strategy-names = "default";
 
@@ -640,6 +648,9 @@
 		oplus,gauge_ic = <&oplus_virtual_gauge>;
 		oplus,topic-update-interval = <10000>;
 		oplus,support_subboard_ntc;
+		oplus,fcl_support;
+		oplus,fcl_index = <0>;
+		oplus,vb_offset = <0>;
 
 		oplus_virtual_gauge: oplus,virtual_gauge {
 			compatible = "oplus,virtual_gauge";
@@ -717,6 +728,12 @@
 
 	oplus_chg_comm: oplus,comm {
 		compatible = "oplus,common-charge";
+		oplus_spec,dec_step = <20>;
+		oplus_spec,dec-vol-cc-full-thr = <0 400 600 800 1000 1200>;
+		oplus_spec,dec-vol-fv-full-mv = <0 20 20 40 40 40>;
+		oplus_spec,dec-vol-wls-ffc-mv = <0  0  0
+						 20 20 20
+						 40 40 20>;
 		oplus_spec,batt-them-thr = <(-100) 0 50 120 160 450 530>;
 		oplus_spec,iterm-ma = <135>; /* 2220*0.05+10 */
 		oplus_spec,removed_bat_decidegc = <390>; /*-39 degree*/

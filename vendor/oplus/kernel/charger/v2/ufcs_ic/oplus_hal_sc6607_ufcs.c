@@ -321,11 +321,6 @@ static int sc6607_ufcs_read_msg(struct ufcs_dev *ufcs, unsigned char *buf, int l
 		chg_err("can't read rx buf, rc=%d\n", rc);
 		return rc;
 	}
-	rc = sc6607_write_byte(chip, SC6607_ADDR_UFCS_CTRL1, 0x10);
-	if (rc < 0) {
-		chg_err("can't write SC6607_ADDR_UFCS_CTRL1, rc=%d\n", rc);
-		return rc;
-	}
 	return (int)rx_buf_len;
 }
 

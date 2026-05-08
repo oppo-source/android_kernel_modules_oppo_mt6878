@@ -428,7 +428,12 @@
 	};
 };
 
+&mt6375_chg {
+	support_icl_optimization;
+};
+
 &lk_charger {
+	support_icl_optimization;
 	en_vol_ctrl_vibrate = <3200>;
 	support_tuv_authentication;
 	high-temp-scheme;

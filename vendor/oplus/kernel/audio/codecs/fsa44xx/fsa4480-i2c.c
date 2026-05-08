@@ -64,7 +64,8 @@ enum switch_vendor {
     HL5281,
     DIO4480,
     WAS4780,
-    BCT4480
+    BCT4480,
+    ET74801
 };
 
 #ifdef OPLUS_ARCH_EXTENDS
@@ -177,7 +178,7 @@ static void fsa4480_usbc_update_settings(struct fsa4480_priv *fsa_priv,
     if (fsa_priv->vendor == DIO4480) {
         return;
     }
-	
+
 	regmap_write(fsa_priv->regmap, FSA4480_SWITCH_SETTINGS, 0x80);
 	regmap_write(fsa_priv->regmap, FSA4480_SWITCH_CONTROL, switch_control);
 	/* FSA4480 chip hardware requirement */
@@ -327,7 +328,7 @@ static int fsa4480_usbc_analog_setup_switches(struct fsa4480_priv *fsa_priv)
 			regmap_write(fsa_priv->regmap, FSA4480_FUN_EN, 0x5D);
 			msleep(400);
 			dev_info(dev, "%s: set HL5281 reg[0x%x] done.\n", __func__, FSA4480_FUN_EN);
-		} else if (fsa_priv->vendor == WAS4780){
+		} else if ((fsa_priv->vendor == WAS4780) || (fsa_priv->vendor == ET74801)) {
 			fsa4480_usbc_update_settings(fsa_priv, 0x00, 0x9F);
 			usleep_range(1000, 1005);
 			regmap_write(fsa_priv->regmap, FSA4480_FUN_EN, 0X0D);
@@ -339,7 +340,7 @@ static int fsa4480_usbc_analog_setup_switches(struct fsa4480_priv *fsa_priv)
 				}
 			}
 			if (switch_status == 0X0D) {
-				pr_err("%s: [WAS4780]Audio jack detection fail.\n", __func__);
+				pr_err("%s: Audio jack detection fail.\n", __func__);
 				return -EINVAL;
 			}
 			for (i = 4 ;i <= 7 ;i++) {
@@ -962,6 +963,9 @@ static int fsa4480_probe(struct i2c_client *i2c)
         } else if (0x11 == reg_value) {
 		dev_info(fsa_priv->dev, "%s: switch chip is WAS4780\n", __func__);
 		fsa_priv->vendor = WAS4780;
+        } else if (0x59 == reg_value) {
+		dev_info(fsa_priv->dev, "%s: switch chip is ET74801\n", __func__);
+		fsa_priv->vendor = ET74801;
 	} else {
 		dev_info(fsa_priv->dev, "%s: switch chip is FSA4480\n", __func__);
 		fsa_priv->vendor = FSA4480;
@@ -975,7 +979,7 @@ static int fsa4480_probe(struct i2c_client *i2c)
 
 	}
 
-	if ((fsa_priv->vendor == DIO4480) || (fsa_priv->vendor == WAS4780)) {
+	if ((fsa_priv->vendor == DIO4480) || (fsa_priv->vendor == WAS4780) || (fsa_priv->vendor == ET74801)) {
 		regmap_write(fsa_priv->regmap, 0x1e, 0x01);//reset DIO4480
 		usleep_range(1*1000, 1*1005);
 	}
@@ -1113,7 +1117,7 @@ static void fsa4480_shutdown(struct i2c_client *i2c) {
 
 	pr_info("%s: recover all register while shutdown\n", __func__);
 
-	if ((fsa_priv->vendor == DIO4480) || (fsa_priv->vendor == WAS4780)) {
+	if ((fsa_priv->vendor == DIO4480) || (fsa_priv->vendor == WAS4780) || (fsa_priv->vendor == ET74801)) {
 		regmap_write(fsa_priv->regmap, 0x1e, 0x01);//reset DIO4480
 		return;
 	}

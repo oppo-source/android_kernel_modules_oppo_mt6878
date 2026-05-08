@@ -80,6 +80,11 @@
 #include <soc/oplus/system/boot_mode.h>
 #include <soc/oplus/system/oplus_project.h>
 #endif
+
+#if IS_ENABLED(CONFIG_HORAE_FLASH_LED_THERMAL)
+#include <soc/oplus/horae_flash_led_temp.h>
+#endif
+
 static int oplus_chg_set_pps_config(struct oplus_chg_ic_dev *ic_dev, int vbus_mv, int ibus_ma);
 static int oplus_chg_set_fixed_pd_config(struct oplus_chg_ic_dev *ic_dev, int vol_mv, int curr_ma);
 static int oplus_pps_get_authentiate(struct oplus_chg_ic_dev *ic_dev);
@@ -580,11 +585,29 @@ int get_vbus(struct mtk_charger *info)
 	return vchr;
 }
 
+#define R_CHARGER_1 330
+#define R_CHARGER_2 39
+
 int battery_meter_get_charger_voltage(void)
 {
+	int vbus_mv = 0;
+	int ret;
+
 	if (!pinfo)
 		return 0;
-	return get_vbus(pinfo);
+
+	if (!IS_ERR_OR_NULL(pinfo->vbus_chan)) {
+		ret = iio_read_channel_processed(pinfo->vbus_chan, &vbus_mv);
+		if (ret < 0) {
+			chg_err("failed to read vbus ,ret=%d\n", ret);
+			return vbus_mv;
+		}
+
+		vbus_mv = (((R_CHARGER_1 + R_CHARGER_2) * 100 * (vbus_mv)) / R_CHARGER_2) / 100;
+		return vbus_mv;
+	} else {
+		return get_vbus(pinfo);
+	}
 }
 
 int get_ibat(struct mtk_charger *info)
@@ -1401,6 +1424,10 @@ static void mtk_charger_parse_dt(struct mtk_charger *info,
 	info->ntc_temp_volt_1840mv = of_property_read_bool(np, "oplus,ntc_temp_volt_1840mv");
 	chr_debug("%s: support_ntc_01c_precision: %d, support_subboard_ntc = %d\n",
 		__func__, info->support_ntc_01c_precision, info->support_subboard_ntc);
+
+#if IS_ENABLED(CONFIG_HORAE_FLASH_LED_THERMAL)
+	info->ntc_switch_gpio.ntc_switch_charge_ic = of_property_read_bool(np, "oplus,ntc_switch_charge_ic");
+#endif
 
 	ret = read_signed_data_from_node(np, "oplus,support_subboard_parameter",
 			(s32 *)(support_subboard_parameter), SUPPORT_PARAMETER_SIZE);
@@ -4477,7 +4504,7 @@ static int oplus_discover_id(struct tcpc_device *tcpc_dev)
 	int ret = 0;
 
 	ret = tcpm_dpm_vdm_discover_id(tcpc_dev, NULL);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))  && !IS_ENABLED(CONFIG_OPLUS_PD_EXT_SUPPORT)
 	if (ret == TCP_DPM_RET_NOT_SUPPORT ||
 	    ret == TCP_DPM_RET_DENIED_WRONG_ROLE ||
 	    ret == TCPM_ERROR_PUT_EVENT) {
@@ -4500,7 +4527,7 @@ static int oplus_discover_svid(struct tcpc_device *tcpc_dev)
 
 	/* Note: the WC065A11JCH not support the cmd of discover_svid. */
 	ret = tcpm_dpm_vdm_discover_svid(tcpc_dev, NULL);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)) && !IS_ENABLED(CONFIG_OPLUS_PD_EXT_SUPPORT)
 	if (ret == TCP_DPM_RET_DENIED_WRONG_ROLE ||
 	    ret == TCPM_ERROR_PUT_EVENT) {
 #else
@@ -4712,6 +4739,7 @@ static int pd_tcp_notifier_call(struct notifier_block *pnb,
 			cancel_delayed_work_sync(&pinfo->svid_check_work);
 			schedule_delayed_work(&pinfo->svid_check_work, 0);
 			oplus_chg_ic_virq_trigger(pinfo->ic_dev, OPLUS_IC_VIRQ_CHG_TYPE_CHANGE);
+			oplus_chg_ic_virq_trigger(pinfo->ic_dev, OPLUS_IC_VIRQ_PD_COMPLETED);
 			break;
 
 		case PD_CONNECT_PE_READY_SNK_PD30:
@@ -4720,6 +4748,7 @@ static int pd_tcp_notifier_call(struct notifier_block *pnb,
 			cancel_delayed_work_sync(&pinfo->svid_check_work);
 			schedule_delayed_work(&pinfo->svid_check_work, 0);
 			oplus_chg_ic_virq_trigger(pinfo->ic_dev, OPLUS_IC_VIRQ_CHG_TYPE_CHANGE);
+			oplus_chg_ic_virq_trigger(pinfo->ic_dev, OPLUS_IC_VIRQ_PD_COMPLETED);
 			break;
 
 		case PD_CONNECT_PE_READY_SNK_APDO:
@@ -4728,6 +4757,7 @@ static int pd_tcp_notifier_call(struct notifier_block *pnb,
 			cancel_delayed_work_sync(&pinfo->svid_check_work);
 			schedule_delayed_work(&pinfo->svid_check_work, 0);
 			oplus_chg_ic_virq_trigger(pinfo->ic_dev, OPLUS_IC_VIRQ_CHG_TYPE_CHANGE);
+			oplus_chg_ic_virq_trigger(pinfo->ic_dev, OPLUS_IC_VIRQ_PD_COMPLETED);
 			break;
 
 		case PD_CONNECT_TYPEC_ONLY_SNK_DFT:
@@ -4737,6 +4767,7 @@ static int pd_tcp_notifier_call(struct notifier_block *pnb,
 			chr_err("PD Notify Type-C Ready\n");
 			oplus_chg_ic_virq_trigger(pinfo->ic_dev, OPLUS_IC_VIRQ_SVID);/* not support svid */
 			oplus_chg_ic_virq_trigger(pinfo->ic_dev, OPLUS_IC_VIRQ_CHG_TYPE_CHANGE);
+			oplus_chg_ic_virq_trigger(pinfo->ic_dev, OPLUS_IC_VIRQ_PD_COMPLETED);
 			break;
 		}
 		break;
@@ -4744,6 +4775,12 @@ static int pd_tcp_notifier_call(struct notifier_block *pnb,
 		chr_err("old_state=%d, new_state=%d\n",
 				noti->typec_state.old_state,
 				noti->typec_state.new_state);
+		if (noti->typec_state.new_state == TYPEC_ATTACHED_DBGACC_SNK ||
+		    noti->typec_state.new_state == TYPEC_ATTACHED_CUSTOM_SRC ||
+		    noti->typec_state.new_state == TYPEC_ATTACHED_NORP_SRC) {
+			oplus_chg_ic_virq_trigger(pinfo->ic_dev, OPLUS_IC_VIRQ_PD_COMPLETED);
+			chr_err("TYPEC_STATE = DBGACC_SNK || CUSTOM_SRC || NORP_SRC\n");
+		}
 		if (noti->typec_state.old_state == TYPEC_UNATTACHED &&
 			noti->typec_state.new_state == TYPEC_ATTACHED_SRC) {
 			power_supply_changed(pinfo->psy1);
@@ -7384,6 +7421,10 @@ static int oplus_get_temp_volt(struct ntc_temp *ntc_param)
 			return -1;
 		}
 		temp_chan = pinfo->chargeric_temp_chan;
+#if IS_ENABLED(CONFIG_HORAE_FLASH_LED_THERMAL)
+		if (pinfo->ntc_switch_gpio.ntc_switch_charge_ic)
+			rc = oplus_set_ntc_switch_lock(CHARGE_IC, true);
+#endif
 		break;
 	case NTC_BATTERY_BTB:
 		if (!pinfo->batt_btb_temp_chan) {
@@ -7429,6 +7470,17 @@ static int oplus_get_temp_volt(struct ntc_temp *ntc_param)
 		return -1;
 	}
 	rc = iio_read_channel_processed(temp_chan, &ntc_temp_volt);
+#if IS_ENABLED(CONFIG_HORAE_FLASH_LED_THERMAL)
+	switch (ntc_param->e_ntc_type) {
+	case NTC_CHARGER_IC:
+		if (pinfo->ntc_switch_gpio.ntc_switch_charge_ic)
+			oplus_set_ntc_switch_lock(CHARGE_IC, false);
+		break;
+	default:
+		break;
+	}
+#endif
+
 	if (rc < 0) {
 		chg_err("read ntc_temp_chan volt failed, rc=%d\n", rc);
 	}
@@ -8070,7 +8122,7 @@ static int oplus_chg_set_fixed_pd_config(struct oplus_chg_ic_dev *ic_dev, int vo
 	return rc;
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)) && !IS_ENABLED(CONFIG_OPLUS_PD_EXT_SUPPORT)
 static int oplus_pps_get_authen_data(void)
 {
 	int i;
@@ -8215,7 +8267,7 @@ bool oplus_pps_check_authen_data(void)
 	return true;
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)) && !IS_ENABLED(CONFIG_OPLUS_PD_EXT_SUPPORT)
 static bool oplus_pps_check_adapter_maxi(void)
 {
 	int ret;
@@ -8262,7 +8314,7 @@ static bool oplus_pps_check_adapter_maxi(void)
 }
 #endif /* LINUX_VERSION_CODE >= 6.1 */
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)) && !IS_ENABLED(CONFIG_OPLUS_PD_EXT_SUPPORT)
 static int oplus_pps_enable_extended_maxi(void)
 {
 	int i;
@@ -8512,6 +8564,20 @@ static struct thermal_zone_device_ops subboard_temp_tzd_ops = {
 	.get_temp = subborad_thermal_read_temp,
 };
 
+#if IS_ENABLED(CONFIG_HORAE_FLASH_LED_THERMAL)
+static int charger_ic_thermal_read_temp(struct thermal_zone_device *tzd, int *temp)
+{
+	if (temp != NULL)
+		*temp = oplus_get_chargeric_temp() * 100; /* thermal zone need 0.001 */
+
+	return 0;
+}
+
+static struct thermal_zone_device_ops charger_ic_temp_tzd_ops = {
+	.get_temp = charger_ic_thermal_read_temp,
+};
+#endif
+
 static int bat_sub_btb_thermal_read_temp(struct thermal_zone_device *tzd, int *temp)
 {
 	if (temp != NULL)
@@ -8574,7 +8640,10 @@ static int register_tz_thermal(struct mtk_charger *info)
 	info->bat_btb_temp_tzd = register_tz_device("bat_btb_temp", &bat_btb_temp_tzd_ops);
 	info->bat_sub_btb_temp_tzd = register_tz_device("bat_sub_btb_temp", &bat_sub_btb_temp_tzd_ops);
 	info->subboard_temp_tzd = register_tz_device("subboard_temp", &subboard_temp_tzd_ops);
-
+#if IS_ENABLED(CONFIG_HORAE_FLASH_LED_THERMAL)
+	if (info->ntc_switch_gpio.ntc_switch_charge_ic)
+		info->charger_ic_temp_tzd = register_tz_device("charge_ic_temp", &charger_ic_temp_tzd_ops);
+#endif
 	return 0;
 }
 #endif /* CONFIG_THERMAL */
@@ -8908,6 +8977,12 @@ static int mtk_charger_probe(struct platform_device *pdev)
 	if (IS_ERR(pinfo->slave_cp_chan)) {
 		chg_err("Couldn't get slave_cp_chan...\n");
 		pinfo->slave_cp_chan = NULL;
+	}
+
+	pinfo->vbus_chan = devm_iio_channel_get(&pdev->dev, "vbus");
+	if (IS_ERR(pinfo->vbus_chan)) {
+		chg_err("Couldn't get vbus...\n");
+		pinfo->vbus_chan = NULL;
 	}
 
 	pinfo->hvdcp_disable = false;

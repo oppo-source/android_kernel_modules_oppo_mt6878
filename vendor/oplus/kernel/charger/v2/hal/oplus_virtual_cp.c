@@ -1229,7 +1229,7 @@ static int oplus_chg_vc_open_step(struct oplus_virtual_cp_ic *vc, struct oplus_c
 		return -ENODEV;
 
 	rc = oplus_chg_ic_func(ic_dev, OPLUS_IC_FUNC_CP_SET_ADC_ENABLE, true);
-	if (rc < 0) {
+	if (rc < 0 && rc != -ENOTSUPP) {
 		chg_err("can't enable cp[%s] adc, rc=%d\n", ic_dev->manu_name, rc);
 		return rc;
 	}

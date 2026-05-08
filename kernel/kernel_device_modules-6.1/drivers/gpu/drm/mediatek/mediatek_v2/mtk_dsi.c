@@ -81,6 +81,7 @@ extern int oplus_pcp_lock_clear(void);
 #include "mtk_drm_trace.h"
 #include "pw_iris_log.h"
 #include "pw_iris_api.h"
+#include "pw_iris_lp.h"
 #include "dsi_iris_mtk_api.h"
 #include "dsi_iris_api.h"
 #endif
@@ -6407,7 +6408,9 @@ static void mtk_dsi_clk_change(struct mtk_dsi *dsi, int en)
 		return;
 
 #if defined(CONFIG_PXLW_IRIS)
-	iris_set_mipi_hopping_status(en);
+	if (iris_is_chip_supported()) {
+		iris_set_mipi_hopping_status(en);
+	}
 #endif /* CONFIG_PXLW_IRIS */
 
 	CRTC_MMP_EVENT_START(index, clk_change,
@@ -7087,6 +7090,12 @@ static void mtk_dsi_cmdq_pack_gce(struct mtk_dsi *dsi, struct cmdq_pkt *handle,
 				break;
 			}
 
+#if defined(CONFIG_PXLW_IRIS)
+			if (iris_is_chip_supported() && iris_is_pt_mode(false) && msg.tx_buf) {
+				msg.type = iris_get_cmd_type(*(u8 *)msg.tx_buf, msg.tx_len);
+				iris_dsi_ctrl_dump_desc_cmd(&msg);
+			}
+#endif /*CONFIG_PXLW_IRIS*/
 			tx_buf = msg.tx_buf;
 			type = msg.type;
 
@@ -11777,6 +11786,8 @@ static void mtk_dsi_vdo_aod_ctrl(struct mtk_dsi *dsi,
 			__func__, __LINE__);
 		return;
 	}
+	if (iris_is_chip_supported() && iris_is_pt_mode(false))
+		iris_abyp_switch_proc(ANALOG_BYPASS_MODE);
 	mtk_crtc_pkt_create(&handle, &(mtk_crtc->base), client);
 
 	if(porch_change_flag & MODE_DSI_HFP){

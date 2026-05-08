@@ -1294,6 +1294,7 @@ typedef int (*iris_wait_vsync_cb)(void);
 typedef void (*iris_send_pwil_cmd_cb)(struct iris_cmd_set *, u32 addr,  u32);
 typedef void (*iris_vdo_mode_send_cmd_with_handle_cb)(void *handle,
 		void *data, int len, u32 flag, int type);
+typedef bool (*iris_get_aod_state_cb)(void);
 
 typedef void (*iris_change_header_cb)(void  *pcmd_comp);
 struct iris_lightup_ops {
@@ -1307,6 +1308,7 @@ struct iris_lightup_ops {
 	iris_send_pwil_cmd_cb send_pwil_cmd;
 	iris_change_header_cb change_header;
 	iris_vdo_mode_send_cmd_with_handle_cb vdo_mode_send_cmd_with_handle;
+	iris_get_aod_state_cb iris_get_aod_state;
 };
 
 typedef int (*iris_configure_get_i7_selected_cb)(u32 display, u32 type, u32 count, u32 *values);
@@ -1789,6 +1791,7 @@ struct iris_cfg {
 	int pt_sr_dejaggy_level;
 	int pt_sr_peaking_level;
 	int pt_sr_DLTI_level;
+	struct mutex fw_parse_cmd_lock;
 	/* frc_pq info*/
 	int frc_pq_guided_level;
 	int frc_pq_dejaggy_level;
@@ -1928,6 +1931,7 @@ struct iris_cfg {
 	struct backlight_v2_data backlight_v2;
 
 	int mipi_hopping_status;
+	uint32_t panel_backlight_in_pt;
 };
 
 #endif // _DSI_IRIS_DEF_H_
