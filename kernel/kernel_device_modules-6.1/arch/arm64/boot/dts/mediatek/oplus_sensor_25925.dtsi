@@ -1,0 +1,134 @@
+&odm {
+	sensor_fb: sensor_fb {
+		compatible = "oplus,sensor-feedback";
+	};
+	oplus_sensor:oplus_sensor {
+		compatible = "oplus,sensor-devinfo";
+		als-row-coe = <1000>;
+		/* sensor start */
+		/*
+		enum {
+			LIS3DH,
+			LSM6DS3,
+			BMI160,
+			LIS2HH12,
+			LSM6DSM,
+			BMI2XY,
+			LSM6DSO,
+			ICM4X6XX,
+			ICM4263X,
+			ICM4N607,
+			BMI22X,
+			SC7A20,
+			MC34X9,
+			BMA4XY,
+			STK8329,
+			BMI3XY,
+			ICM456XY,
+		};
+		*/
+		gsensor_1: gsensor_1 {
+			status = "okay";
+			sensor_name = <11>;//SC7A20
+			i2c_num = <2>;
+			i2c_addr = <0>;
+			direction = <1>;
+			eint_num = <16>;
+			acc_cali_range= <300 300 300>;
+			stdev_xyz = <40>;
+			gyro_gain = <150>;
+			filter_param_l = <1>;
+			filter_param_h = <8>;
+		};
+		/*
+		enum {
+			AKM09911,
+			MMC3530,
+			MMC5603,
+			MXG4300,
+			AKM09918,
+		};
+		*/
+		msensor_1: msensor_1 {
+			status = "okay";
+			sensor_name = <3>;//MXG4300
+			i2c_num = <0>;
+			i2c_addr = <0x0C>;
+			direction = <3>;
+			eint_num = <0>;
+			soft-mag-parameter = <10541 0 33 1 181 0 175 1 9515 0 223 0 229 1 167 1 10282 0>;
+		};
+		/*
+		enum {
+			TCS3408_CCT,
+			STK37600_CCT,
+		};
+		*/
+		cct_1: cct_1 {
+			status = "okay";
+			sensor_name = <1>;//STK37600_CCT
+			i2c_num = <5>;
+			i2c_addr = <0x48>;
+			direction = <0>;
+			eint_num = <10>;
+			available_sensor = <3>; // bit 0: rear als, bit 1: rear cct, bit 2: rear flicker
+			enable_als_gain_level = <1>;
+			device_name = "stk37600";
+		};
+		cct_panel_p_d_1: cct_panel_p_d_1 {
+			product_num = <2>;
+		};
+		cct_panel_dh_soft_light_1: cct_panel_dh_soft_light_1 {
+			product_num = <3>;
+		};
+		light_1: light_1 {
+			device_name = "stk3b6x cct";
+		};
+		als_panel_dh_soft_light_1: als_panel_dh_soft_light_1 {
+			status = "okay";
+			device_name = "stk3b6x cct";
+			support_panel = <14>; // 1-SAMSUNG, 2-BOE, 3-TIANMA, 4-NT36672C, 5-HX83112F, 6-TM, 7-P_3, 8-P_B
+			gold_cct_channels = <5>;
+			gold_cct_3k = <4354 6212 270 146 13754>; // 3000k gold parameter
+			gold_cct_6k = <3132 5186 680 98 12310>;  // 6000k gold parameter
+		};
+		als_panel_p_d_1: als_panel_p_d_1 {
+			status = "okay";
+			device_name = "stk3b6x cct";
+			support_panel = <17>; // 1-SAMSUNG, 2-BOE, 3-TIANMA, 4-NT36672C, 5-HX83112F, 6-TM, 7-P_3, 8-P_B
+			gold_cct_channels = <5>;
+			gold_cct_3k = <3516 5310 356 122 13084>; // 3000k gold parameter
+			gold_cct_6k = <2452 4704 818 86 12530>;  // 6000k gold parameter
+		};
+		sar_1: sar_1 {
+			status = "okay";
+			sensor_name = <1>;//SX937x
+			i2c_num = <4>;
+			i2c_addr = <0x2c>;
+			direction = <0>;
+			eint_num = <5>;
+			channel_num = <4>;
+			channel_0_min = <3833>;
+			channel_0_max = <5749>;
+			channel_1_min = <1115>;
+			channel_1_max = <1672>;
+			channel_2_min = <667>;
+			channel_2_max = <1000>;
+			channel_3_min = <2166>;
+			channel_3_max = <3249>;
+			reg_table_num = <4>; //5G
+			sup_move_detect = <1>;
+		};
+		elevator: elevator{
+			status = "okay";
+			sup_accel_rpt = <1>;
+		};
+		dev_ori: dev_ori {
+			status = "okay";
+			fast_mode = <1>;
+		};
+	};
+/* sensor end */
+};
+
+

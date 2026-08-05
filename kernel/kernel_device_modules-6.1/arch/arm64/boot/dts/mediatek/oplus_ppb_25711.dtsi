@@ -1,0 +1,84 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2025 MediaTek Inc.
+ */
+#include <dt-bindings/iio/mt635x-auxadc.h>
+#include <dt-bindings/pinctrl/mt6878-pinfunc.h>
+
+&low_battery_throttling {
+		compatible = "mediatek,low_battery_throttling";
+		lvsys-thd-enable = <1>;
+		vbat-thd-enable = <1>;
+		bat0-thd-volts-l = <
+					3180 2950 2750
+					3280 3050 2900
+					3340 3150 3000
+					3500 3350 3200>;
+		bat0-thd-volts-h = <
+					3280 3180 2950
+					3380 3280 3050
+					3440 3340 3150
+					3600 3500 3350>;
+		bat1-thd-volts-l = <
+					3180 2950 2750
+					3280 3050 2900
+					3340 3150 3000
+					3500 3350 3200>;
+		bat1-thd-volts-h = <
+					3280 3180 2950
+					3380 3280 3050
+					3440 3340 3150
+					3600 3500 3350>;
+		lvsys-thd-volt-l = <2750>;
+		lvsys-thd-volt-h = <2950>;
+		temperature-max-stage = <3>;
+		temperature-stage-threshold = <25 10 0>;
+
+		bat0-aging-threshold = <1000 2000>;
+		bat0-aging-volts-t0 =  <0 0>;
+		bat0-aging-volts-t1 =  <0 0>;
+		bat0-aging-volts-t2 =  <0 0>;
+		bat0-aging-volts-t3 =  <0 0>;
+		bat1-aging-threshold = <1000 2000>;
+		bat1-aging-volts-t0 =  <0 0>;
+		bat1-aging-volts-t1 =  <0 0>;
+		bat1-aging-volts-t2 =  <0 0>;
+		bat1-aging-volts-t3 =  <0 0>;
+
+		pt-shutdown-enable = <0>;
+		throttle-level = <0 1 2 3>,
+						<0 1 2 3>,
+						<0 1 2 3>,
+						<0 1 2 3>;
+		bootmode = <&chosen>;
+		gauge = <&mtk_gauge>;
+	};
+
+&cpu_power_throttling {
+		compatible = "mediatek,cpu-power-throttling";
+
+		lbat-max-level = <3>;
+		lbat-limit-freq-lv1 = < 2200000 2200000 2200000>;
+		lbat-limit-freq-lv2 = < 1900000 1800000 1800000>;
+		lbat-limit-freq-lv3 = < 1300000 1300000 1300000>;
+
+		oc-max-level = <2>;
+		oc-limit-freq-lv1 = < 2147483647 2147483647 2147483647>;
+		oc-limit-freq-lv2 = < 2147483647 2147483647 2147483647>;
+
+		soc-max-level = <1>;
+		soc-limit-freq-lv1 = < 2147483647 2147483647 2147483647>;
+};
+
+&gpu_power_throttling {
+		compatible = "mediatek,gpu-power-throttling";
+
+		lbat-max-level = <3>;
+		lbat-limit-freq = <2147483647 2147483647 2147483647>;
+
+		oc-max-level = <2>;
+		oc-limit-freq = <2147483647 2147483647>;
+
+		soc-max-level = <1>;
+		soc-limit-freq = <2147483647>;
+};

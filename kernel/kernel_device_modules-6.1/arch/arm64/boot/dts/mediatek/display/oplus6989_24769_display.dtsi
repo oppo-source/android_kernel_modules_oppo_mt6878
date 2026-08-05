@@ -1,0 +1,124 @@
+&mtk_leds {
+	compatible = "mediatek,disp-leds";
+	status = "okay";
+
+	backlight {
+		label = "lcd-backlight";
+		led-mode = <4>;
+		min-brightness = <1>;
+		max-brightness = <4094>;
+		max-hw-brightness = <4094>;
+		led-bits = <13>;
+		trans-bits = <13>;
+		default-state = "on";
+	};
+};
+
+&dsi0 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	panel7@6 {
+		compatible = "panel_ab946_p_3_a0020_dsi_cmd_bcp";
+		reg = <0>;
+		reset-gpios = <&pio 230 0>;
+		vddr_en-gpios = <&pio 86 0>;
+		vddi-supply = <&mt6373_vrfio18_aif>;
+		vci-supply = <&mt6373_vmc>;
+		oplus,dsi-serial-number-enabled=<1>;
+		oplus,dsi-serial-number-switch-page;
+		oplus,dsi-serial-number-index= <0>;
+		oplus,dsi-serial-number-switch-page-command= <0xFF 0x5A 0xA5 0x1D>;
+		oplus,dsi-serial-number-default-switch-page-command= <0xFF 0x5A 0xA5 0x00>;
+		oplus,dsi-serial-number-reg= <0x82>;
+		oplus,dsi-serial-number-read-count= <7>;
+		/* 0 not support, 1 with switch, 2 Global high frequency pwm without switch */
+		oplus,pwm-turbo-support = <2>;
+		oplus,pwm-switch-backlight-threshold = <0x48A>;
+		oplus,pwm-onepulse-support = <1>;
+		oplus,pwm-onepulse-enabled = <0>;
+		oplus-adfr-config = <0x201>;
+		oplus-adfr-test-te-gpios = <&pio 222 0>;
+		/* ofp config */
+		oplus,ofp-fp-type = <0x10>;
+		res-switch = <2>;
+		pinctrl-names = "default";
+		port {
+			panel_in7: endpoint {
+				remote-endpoint = <&dsi_out7>;
+			};
+		};
+	};
+	panel8@7 {
+		compatible = "panel_ab948_p_7_a0020_dsi_cmd";
+		reg = <1>;
+		reset-gpios = <&pio 230 0>;
+		vddr_en-gpios = <&pio 86 0>;
+		vddi-supply = <&mt6373_vrfio18_aif>;
+		vci-supply = <&mt6373_vmc>;
+		oplus,dsi-serial-number-enabled=<1>;
+		oplus,dsi-serial-number-switch-page;
+		oplus,dsi-serial-number-index= <0>;
+		oplus,dsi-serial-number-switch-page-command= <0xFF 0x5A 0xA5 0x1D>;
+		oplus,dsi-serial-number-default-switch-page-command= <0xFF 0x5A 0xA5 0x00>;
+		oplus,dsi-serial-number-reg= <0x82>;
+		oplus,dsi-serial-number-read-count= <7>;
+		/* 0 not support, 1 with switch, 2 Global high frequency pwm without switch */
+		oplus,pwm-turbo-support = <2>;
+		oplus,pwm-switch-backlight-threshold = <0x48A>;
+		oplus,pwm-onepulse-support = <1>;
+		oplus,pwm-onepulse-enabled = <0>;
+		oplus-adfr-config = <0x201>;
+		oplus-adfr-test-te-gpios = <&pio 222 0>;
+		/* ofp config */
+		oplus,ofp-fp-type = <0x10>;
+		res-switch = <2>;
+		pinctrl-names = "default";
+		port {
+			panel_in8: endpoint {
+				remote-endpoint = <&dsi_out8>;
+			};
+		};
+	};
+	panel9@8 {
+		compatible = "panel_ae037_p_3_a0026_dsi_vdo";
+		reg = <2>;
+		reset-gpios = <&pio 230 0>;
+		1p2-gpios = <&pio 86 0>;
+		1p8-supply = <&mt6373_vrfio18_aif>;
+		3p0-supply = <&mt6373_vmc>;
+		oplus,dsi-serial-number-enabled=<0>;
+		oplus,dsi-serial-number-switch-page;
+		oplus,dsi-serial-number-index= <0>;
+		oplus,dsi-serial-number-switch-page-command= <0xFF 0x5A 0xA5 0x1D>;
+		oplus,dsi-serial-number-default-switch-page-command= <0xFF 0x5A 0xA5 0x00>;
+		oplus,dsi-serial-number-reg= <0x82>;
+		oplus,dsi-serial-number-read-count= <7>;
+		/* ofp config */
+		oplus,ofp-fp-type = <0x210>;
+		res-switch = <2>;
+		pinctrl-names = "default";
+		port {
+			panel_in9: endpoint {
+				remote-endpoint = <&dsi_out9>;
+			};
+		};
+	};
+
+	ports {
+		port {
+			dsi_out7: endpoint@6 {
+				remote-endpoint = <&panel_in7>;
+			};
+
+			dsi_out8: endpoint@7 {
+				remote-endpoint = <&panel_in8>;
+			};
+
+			dsi_out9: endpoint@8 {
+				remote-endpoint = <&panel_in9>;
+			};
+
+		};
+	};
+};

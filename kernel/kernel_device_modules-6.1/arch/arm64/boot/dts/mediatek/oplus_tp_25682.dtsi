@@ -1,0 +1,239 @@
+
+&spi0 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+	touchscreen@0{
+		compatible = "novatek,nt36532c";
+		spi-max-frequency = <12000000>;
+		reg = <0x0>;
+		chip-num = <1>;
+		chip-name = "NT36532";
+		status = "okay";
+		interrupt-parent = <&pio>;
+		irq-gpio = <&pio 20 0x2001>;
+
+		project_id = <25682>;
+		firmware_name = "0xAE15000", "0xAE15000", "0xAE15000";
+
+		pinctrl-names = "default", "pin_cs_high", "pin_cs_low";
+		pinctrl-0 = <&ctp_oplus_pins_default>;
+		pinctrl-1 = <&ts_cs_active>;
+		pinctrl-2 = <&ts_cs_suspend>;
+		touchpanel,irq_need_dev_resume_time = <500>;
+
+		touchpanel,max-num-support = <10>;
+		touchpanel,tx-rx-num = <54 38>;
+		touchpanel,panel-coords = <20000 28000>;
+		touchpanel,display-coords = <2000 2800>;
+		touchpanel,touchmajor-limit = <0 54>;
+		touchpanel,single-optimized-time = <8>;
+		touchpanel,pen-tx-rx-num = <12 8>;
+		touchpanel,doze-tx-num = <12>;
+		touchpanel,pen-panel-coords = <20000 28000>;
+		touchpanel,pen-max-pressure = <16384>;
+		touchpanel,pen-max-tilt = <60 60>;
+		touchpanel,msecs-to-jiffies-time = <100>;
+		touchpanel,smooth-level = <255 32 64 96 128 254>;
+		touchpanel,sensitive-level = <255 40 30 15 9 3>;
+		touchpanel,sensitive-level-charging = <255 50 40 25 15 8>;
+		tp_type = <15>;
+		panel_type = <15 15 15>;
+
+		platform_support_project = <25682 25683 25701>;
+		platform_support_project_dir = <25682 25682 25682>;
+		platform_support_project_commandline = "ae150_p_d_a0038_vdo_pvt", "ae150_p_d_a0038_vdo_dvt", "ae150_p_d_a0038_vdo_evt";
+		platform_support_project_external_name = "CHROME";
+		vid_len = <7>;
+
+		incell_screen;
+		fw_edge_limit_support;
+		black_gesture_support;
+		charger_pump_support;
+		esd_handle_support;
+		black_gesture_test_support;
+		game_switch_support;
+		smart_gesture_support;
+		pressure_report_support;
+		pen_support;
+		waterproof_support;
+		irq_need_dev_resume_ok;
+		fw_update_app_support;
+		health_monitor_support;
+		fw_update_in_probe_with_headfile;
+		black_gesture_indep_support;
+		report_rate_limit;
+		touchpanel,button-type = <4>;
+	};
+};
+
+&pio {
+	ctp_oplus_pins_default: pins_default {
+			pins-cmd-dat {
+			pinmux = <PINMUX_GPIO58__FUNC_SPI0_MO>,
+				<PINMUX_GPIO59__FUNC_SPI0_MI>,
+				<PINMUX_GPIO56__FUNC_SPI0_CLK>,
+				<PINMUX_GPIO57__FUNC_SPI0_CSB>;
+			drive-strength = <4>;
+		};
+	};
+
+	ts_cs_active: ts_cs_active {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO57__FUNC_SPI0_CSB>;
+		};
+	};
+	ts_cs_suspend: ts_cs_suspend {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO57__FUNC_GPIO57>;
+			output-low;
+		};
+	};
+
+};
+&keypad {
+		keypad,volume-down = <&pio 31 0x00>;
+		keypad,ai-key = <&pio 2 0x00>;
+		pinctrl-names = "volume_down_as_int","ai_key_init";
+		pinctrl-0 = <&volume_down_gpio_eint>;
+		pinctrl-1 = <&volume_ai_key_eint>;
+		status = "okay";
+};
+
+&pio {
+        volume_down_gpio_eint:volume_down@0{
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO31__FUNC_GPIO31>;
+                        slew-rate = <0>;  /*direction 0:in, 1:out*/
+                        input-enable;
+                        bias-pull-up;
+                };
+        };
+
+        volume_ai_key_eint:ai_key@0{
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO2__FUNC_GPIO2>;
+                        slew-rate = <0>;  /*direction 0:in, 1:out*/
+                        input-enable;
+                        bias-pull-up;
+                };
+        };
+};
+
+&odm {
+        kpd_volume_down:kpd_volume_down {
+                compatible = "mediatek, VOLUME_DOWN-eint";
+                interrupt-parent = <&pio>;
+                interrupts = <31 IRQ_TYPE_EDGE_FALLING 31 0>;
+                debounce = <32000>;
+                status = "okay";
+        };
+
+        ai_key:ai_key {
+                compatible = "mediatek, AI_KEY-eint";
+                interrupt-parent = <&pio>;
+                interrupts = <2 IRQ_TYPE_EDGE_FALLING 2 0>;
+                debounce = <32000>;
+                status = "okay";
+        };
+};
+
+&odm {
+	devinfo {
+		status = "disabled";
+	};
+
+	devinfo_s2 {
+		compatible = "oplus-devinfo";
+
+		pinctrl-names = "default", "aboard_gpio0_sleep", "aboard_gpio0_active", "aboard_gpio0_idle","aboard_gpio1_sleep", "aboard_gpio1_active", "aboard_gpio1_idle";
+		pinctrl-0 = <&hw_pins_default>;
+		pinctrl-1 = <&aboard_pin_gpio0_sleep>;
+		pinctrl-2 = <&aboard_pin_gpio0_active>;
+		pinctrl-3 = <&aboard_pin_gpio0_idle>;
+		pinctrl-4 = <&aboard_pin_gpio1_sleep>;
+		pinctrl-5 = <&aboard_pin_gpio1_active>;
+		pinctrl-6 = <&aboard_pin_gpio1_idle>;
+
+		main-sub {
+			compatible = "hw-match, main-sub";
+			use_double_tristate_gpio;
+			aboard-gpio0 = <&pio 103 0>;
+			aboard-patterns = <1 0 1>;
+			/*main board*/
+			match-projects = <25682 25683 25701>;
+		};
+
+		main-sub-a2 {
+			compatible = "hw-match, main-sub-a2";
+			use_double_tristate_gpio;
+			aboard-gpio1 = <&pio 110 0>;
+			aboard-patterns = <2 0 1>;	/*0[high-resistance] 1[pull-down] 2[pull-up]*/
+			/*main board*/
+			match-projects = <25682 25683 25701>;
+		};
+	};
+};
+
+&pio{
+	hw_pins_default:default@hw_sub_id {
+	};
+
+	aboard_pin_gpio0_sleep:sleep@id0 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO103__FUNC_GPIO103>;
+			slew-rate = <0>;
+			input-enable;
+			bias-pull-down;
+		};
+	};
+
+	aboard_pin_gpio0_active:active@id0 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO103__FUNC_GPIO103>;
+			slew-rate = <0>;
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
+	aboard_pin_gpio0_idle:idle@id0 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO103__FUNC_GPIO103>;
+			slew-rate = <0>;
+			bias-disable;
+			input-enable;
+		};
+	};
+
+	aboard_pin_gpio1_sleep:sleep@id1 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO110__FUNC_GPIO110>;
+			slew-rate = <0>;
+			input-enable;
+			bias-pull-down;
+		};
+	};
+
+	aboard_pin_gpio1_active:active@id1 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO110__FUNC_GPIO110>;
+			slew-rate = <0>;
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
+	aboard_pin_gpio1_idle:idle@id1 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO110__FUNC_GPIO110>;
+			slew-rate = <0>;
+			bias-disable;
+			input-enable;
+		};
+	};
+};
+
+&gpio_keys {
+	status = "disabled";
+};

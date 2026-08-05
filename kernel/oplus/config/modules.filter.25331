@@ -1,0 +1,11 @@
+oplus_bsp_memleak_detect_simple.ko
+oplus_file_record.ko
+iommu_test.ko
+oplus_lock_torture.ko
+oplus_bsp_sigkill_diagnosis.ko
+oplus_bsp_level_protect.ko
+oplus_exit_mm_optimize.ko
+oplus_bsp_lz4k.ko
+oplus_bsp_fg_protect.ko
+oplus_ipa_thermal.ko
+oplus_bsp_qos_sched.ko

@@ -1,0 +1,38 @@
+// SPDX-License-Identifier: GPL-2.0
+/* Copyright (c) 2020 MediaTek Inc. */
+
+&i2c9 {
+	clock-frequency = <400000>;
+
+	aw87xxx_pa_5B@5B {
+		compatible = "awinic,aw87xxx_pa_2_x_0";
+		reg = <0x5B>;
+		reset-gpio = <&pio 149 0>;
+		dev_index = < 0 >;
+		status = "okay";
+	};
+	aw87xxx_pa_58@58 {
+		compatible = "awinic,aw87xxx_pa_2_x_0";
+		reg = <0x58>;
+		reset-gpio = <&pio 152 0>;
+		dev_index = < 1 >;
+		status = "okay";
+	};
+
+	was4783: was4783@42 {
+		 compatible = "oplus,typec-switch-i2c";
+		 reg = <0x42>;
+		 // add for supporting type-c headphone detect bypass
+		 oplus,hp-bypass = <1>;
+		 status = "okay";
+	};
+};
+
+&sound {
+	oplus,special-pa-dapm = <1>;
+};
+
+// add for supporting type-c headphone detect bypass
+&accdet {
+	headset-eint0-disable = <1>;
+};
