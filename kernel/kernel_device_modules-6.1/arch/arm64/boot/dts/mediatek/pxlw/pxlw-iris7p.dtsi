@@ -1,0 +1,99 @@
+/* SPDX-License-Identifier: GPL-2.0
+ *
+ * Copyright (C) 2017-2020, Pixelworks, Inc.
+ */
+
+#include "pxlw-iris7p-cfg-casioy-nt37703a-1080-2392-dsc-video.dtsi"
+#include "pxlw-iris7p-cfg-casiom-nt37706a-1800-2800-dsc-video.dtsi"
+
+/*
+&dispsys_config {
+	/delete-property/ enable-secondary-path;
+};
+
+&mipi_tx_config1 {
+	status = "disabled";
+};
+
+&dsi1 {
+	status = "disabled";
+};
+
+&dsi1_te {
+	status = "disabled";
+};
+*/
+&i2c6 {
+	clock-frequency = <400000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+		pixelworks@22 {  //i2c: 22, i3c: 26
+		status = "okay";
+		compatible = "pixelworks,iris-i2c";
+		reg = <0x22>;
+	};
+};
+
+&pio {
+	iris_reset_active: iris_reset_active {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO185__FUNC_GPIO185>;
+			slew-rate = <1>;
+			output-high;
+		};
+	};
+	iris_reset_suspend: iris_reset_suspend {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO185__FUNC_GPIO185>;
+			input-enable;
+			bias-pull-down;
+		};
+	};
+
+	iris_wakeup_active: iris_wakeup_active {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO42__FUNC_GPIO42>;
+			slew-rate = <1>;
+			output-low;
+		};
+	};
+	iris_wakeup_suspend: iris_wakeup_suspend {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO42__FUNC_GPIO42>;
+			input-enable;
+			bias-pull-down;
+		};
+	};
+
+	iris_abyp_ready_active: iris_abyp_ready_active {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO19__FUNC_GPIO19>;
+			input-enable;
+			bias-disable;
+		};
+	};
+	iris_abyp_ready_suspend: iris_abyp_ready_suspend {
+		pins-cmd-dat {
+			pinmux = <PINMUX_GPIO19__FUNC_GPIO19>;
+			input-enable;
+			bias-pull-down;
+		};
+	};
+};
+
+&odm {
+	pxlw,iris {
+		compatible = "pxlw,iris";
+		//index = <0>;
+
+		pinctrl-names = "iris_active", "iris_suspend";
+		pinctrl-0 = <&iris_reset_active &iris_wakeup_active &iris_abyp_ready_active>;
+		pinctrl-1 = <&iris_reset_suspend &iris_wakeup_suspend &iris_abyp_ready_suspend>;
+	};
+};
+
+&chosen {
+	pxlw,iris {
+		pxlw,iris-capability = <0x1 0x1 0x7 0x3F7 0x3>;
+	};
+};

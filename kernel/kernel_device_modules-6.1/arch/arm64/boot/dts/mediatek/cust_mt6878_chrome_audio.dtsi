@@ -1,0 +1,100 @@
+
+/* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&odm {
+	si_pa_L_ONE: si_pa_L_ONE{
+		compatible = "si,sia81xx";
+		si,si_pa_type = "sia8152x";
+		si,si_pa_disable_pin = <1>;
+		channel_num = <0>;
+	};
+	si_pa_L_TWO: si_pa_L_TWO{
+		compatible = "si,sia81xx";
+		si,si_pa_type = "sia8152x";
+		si,si_pa_disable_pin = <1>;
+		channel_num = <2>;
+	};
+	si_pa_R_ONE: si_pa_R_ONE{
+		compatible = "si,sia81xx";
+		si,si_pa_type = "sia8152x";
+		si,si_pa_disable_pin = <1>;
+		channel_num = <1>;
+	};
+	si_pa_R_TWO: si_pa_R_TWO{
+		compatible = "si,sia81xx";
+		si,si_pa_type = "sia8152x";
+		si,si_pa_disable_pin = <1>;
+		channel_num = <3>;
+	};
+};
+
+
+
+&i2c9 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	clock-frequency = <400000>;
+	mediatek,use-open-drain;
+
+	sia81xx_i2c_R_ONE: sia81xx_i2c_R_ONE@28 {
+		compatible = "si,sia81xx-i2c";
+		reg = <0x28>;
+		si,sipa-dev = <&si_pa_R_ONE>;
+	};
+	sia81xx_i2c_R_TWO: sia81xx_i2c_R_TWO@29 {
+		compatible = "si,sia81xx-i2c";
+		reg = <0x29>;
+		si,sipa-dev = <&si_pa_R_TWO>;
+	};
+
+	fsa4480: fsa4480@42 {
+		compatible = "qcom,fsa4480-i2c";
+		reg = <0x42>;
+		fsa4480,hp-bypass = <1>;
+		fsa4480,hp-det-flag;
+		status = "okay";
+	};
+};
+
+&i2c3 {
+	status = "okay";
+	sia81xx_i2c_L_ONE: sia81xx_i2c_L_ONE@2B {
+		compatible = "sia81xx-i2c";
+		reg = <0x2B>;
+		si,sipa-dev = <&si_pa_L_ONE>;
+	};
+	sia81xx_i2c_L_TWO: sia81xx_i2c_L_TWO@28 {
+		compatible = "si,sia81xx-i2c";
+		reg = <0x28>;
+		si,sipa-dev = <&si_pa_L_TWO>;
+	};
+};
+
+&sound {
+	si,sia81xx-max-num = <4>;
+	si,sia81xx-aux-devs = <&si_pa_L_ONE>,<&si_pa_R_ONE>,<&si_pa_L_TWO>,<&si_pa_R_TWO>;
+	si,sia81xx-aux-devs-prefix = "SpkrLeftONE","SpkrRightONE","SpkrLeftTWO","SpkrRightTWO";
+	si,is_analog_pa = <1>;
+	oplus,special-pa-dapm = <1>;
+};
+
+&accdet {
+	headset-three-key-threshold = <0 82 170 306>;
+	headset-eint0-disable = <1>;
+	typec_switch_type = <2>;
+};
+
+&mt6369codec {
+	oplus,vow-mic-pga-gain = <4>;
+};

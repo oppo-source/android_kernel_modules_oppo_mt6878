@@ -1,0 +1,226 @@
+
+#include "mediatek/oplus_tp_26841_firmware.dtsi"
+&spi0 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	touch_ts@0 {
+		reg = <0>;
+		compatible = "oplus,tp_noflash";
+		spi-max-frequency = <9600000>;
+		status = "okay";
+		project_id = <26841>;
+		panel_type = <15>; /* 15 huaqing */
+		chip-num = <1>;
+		chip-name = "NF_TD4376";
+
+		/* touch spi config */
+		reset-gpio = <&pio 6 0x1>;
+		interrupt-parent = <&pio>;
+		interrupts = <20 0x0>;
+		irq-gpio = <&pio 20 0x2008>;
+
+		/*tp-pinctrl*/
+		pinctrl-names = "default", "pin_set_low", "pin_set_high";
+		pinctrl-0 = <&ctp_tp_spi_mode &ctp_ts_int_poweron>;
+		pinctrl-1 = <&ctp_ts_cs_poweroff &ctp_ts_int_poweroff &ctp_ts_reset_poweroff>;
+		pinctrl-2 = <&ctp_ts_cs_poweron  &ctp_ts_int_poweron  &ctp_ts_reset_poweron>;
+
+		touchpanel,max-num-support = <10>;
+		touchpanel,tx-rx-num = <16 36>;
+		touchpanel,panel-coords = <4320 9600>;
+		touchpanel,display-coords = <1080 2400>;
+		touchpanel,touchmajor-limit = <0 54>;
+
+		platform_support_project = <26841 26871>;
+		platform_support_project_dir = <26841 26841>;
+		platform_support_project_commandline = "oplus25680_td4376b_fhdp_hx_dsi_vdo_lcm_drv";
+		firmware_name = "AB923HT001";
+		touchpanel,smooth-level = <255 5 4 3 2 1>;
+		touchpanel,sensitive-level = <255 1 2 3 4 5>;
+		touchpanel,single-optimized-time = <8>;
+		touchpanel,tp_ic_type = <2>;
+		//touchpanel,int-mode = <1>;
+
+		incell_screen;
+		fw_edge_limit_support;
+		black_gesture_support;
+		charger_pump_support;
+		headset_pump_support;
+		esd_handle_support;
+		//spurious_fingerprint_support;
+		//lcd_trigger_fp_check;
+		black_gesture_test_support;
+		noflash_support;
+		smart_gesture_support;
+		pressure_report_support;
+		fw_update_app_support;
+		game_switch_support;
+		drlimit_remove_support;
+		lcd_trigger_load_tp_fw_support;
+		freq_hop_simulate_support;
+		suspend_gesture_cfg;
+		fw_update_in_probe_with_headfile;
+		health_monitor_v2_support;
+		health_monitor_support;
+		// diaphragm_touch_support;
+		palm_to_sleep_support;
+		// report_rate_white_list_support;
+		// incell_aod_gesture_support;
+		pt17_pt18_test_support;
+		// lpwg_fw_support;
+		glove_mode_v2_support;
+		// aiunit_game_info_support;
+		waterproof_support;
+		disable_touch_event_support;
+		// tp_data_record_support;
+		// snr_read_support;
+		hw_rt_retry_support; //suzuki firmwareload fail do hareware reset
+	};
+};
+
+&pio {
+        ctp_tp_spi_mode:ctp_tp_spi_mode{
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO59__FUNC_SPI0_MI>,
+                                <PINMUX_GPIO58__FUNC_SPI0_MO>,
+                                <PINMUX_GPIO56__FUNC_SPI0_CLK>,
+                                <PINMUX_GPIO57__FUNC_SPI0_CSB>;
+                        drive-strength = <4>;
+                };
+        };
+        ctp_ts_cs_poweroff: ctp_ts_cs_poweroff {
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO57__FUNC_SPI0_CSB>;
+                        slew-rate = <1>;
+                        output-low;
+                        bias-disable;
+                };
+        };
+        ctp_ts_cs_poweron: ctp_ts_cs_poweron {
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO57__FUNC_SPI0_CSB>;
+                        drive-strength = <2>;
+                };
+        };
+        ctp_ts_int_poweroff: ctp_ts_int_poweroff {
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO20__FUNC_GPIO20>;
+                        output-low;
+                };
+        };
+        ctp_ts_int_poweron: ctp_ts_int_poweron {
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO20__FUNC_GPIO20>;
+                        input-enable;
+                };
+        };
+        ctp_ts_reset_poweroff: ctp_ts_reset_poweroff {
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO6__FUNC_GPIO6>;
+                        slew-rate = <1>;
+                        output-low;
+                        bias-disable;
+                };
+        };
+
+        ctp_ts_reset_poweron: ctp_ts_reset_poweron {
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO6__FUNC_GPIO6>;
+                        slew-rate = <1>;
+                        output-high;
+                        bias-disable;
+                };
+        };
+};
+&keypad {
+		keypad,volume-down = <&pio 31 0x00>;
+		pinctrl-names = "volume_down_as_int";
+		pinctrl-0 = <&volume_down_gpio_eint>;
+		status = "okay";
+};
+
+&pio {
+        volume_down_gpio_eint:volume_down@0{
+                pins_cmd_dat {
+                        pinmux = <PINMUX_GPIO31__FUNC_GPIO31>;
+                        slew-rate = <0>;  /*direction 0:in, 1:out*/
+                        input-enable;
+                        bias-pull-up;
+                };
+        };
+};
+
+&odm {
+        kpd_volume_down:kpd_volume_down {
+                compatible = "mediatek, VOLUME_DOWN-eint";
+                interrupt-parent = <&pio>;
+                interrupts = <31 IRQ_TYPE_EDGE_FALLING 31 0>;
+                debounce = <32000>;
+                status = "okay";
+        };
+};
+
+&odm {
+	devinfo {
+		status = "disabled";
+	};
+
+	devinfo_s2 {
+		compatible = "oplus-devinfo";
+
+		pinctrl-names = "default", "aboard_gpio0_sleep", "aboard_gpio0_active", "aboard_gpio0_idle";
+		pinctrl-0 = <&hw_pins_default>;
+		pinctrl-1 = <&aboard_pin_gpio0_sleep>;
+		pinctrl-2 = <&aboard_pin_gpio0_active>;
+		pinctrl-3 = <&aboard_pin_gpio0_idle>;
+
+		main-sub {
+			compatible = "hw-match, main-sub";
+			use_tristate_gpio;
+			aboard-gpio0 = <&pio 184 0>;
+			aboard-patterns = <0 0>;	/*0[high-resistance] 1[pull-down] 2[pull-up]*/
+			/*main board*/
+			match-projects = <26841 26871>;
+		};
+	};
+};
+
+&pio{
+	hw_pins_default:default@hw_sub_id {
+	};
+
+	aboard_pin_gpio0_sleep:sleep@id0 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO184__FUNC_GPIO184>;
+			slew-rate = <0>;
+			bias-pull-down = <MTK_PUPD_SET_R1R0_10>;
+			input-enable;
+		};
+	};
+
+	aboard_pin_gpio0_active:active@id0 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO184__FUNC_GPIO184>;
+			slew-rate = <0>;
+			bias-pull-up = <MTK_PUPD_SET_R1R0_10>;
+			input-enable;
+		};
+	};
+
+	aboard_pin_gpio0_idle:idle@id0 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO184__FUNC_GPIO184>;
+			slew-rate = <0>;
+			bias-disable;
+			input-enable;
+		};
+	};
+};
+
+&gpio_keys {
+	status = "disabled";
+};
+
+/* TOUCH end */
+

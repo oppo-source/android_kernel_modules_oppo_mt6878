@@ -1,0 +1,135 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2025 MediaTek Inc.
+ */
+#include <dt-bindings/iio/mt635x-auxadc.h>
+#include <dt-bindings/pinctrl/mt6878-pinfunc.h>
+
+&low_battery_throttling {
+		compatible = "mediatek,low_battery_throttling";
+		lvsys-thd-enable = <1>;
+		vbat-thd-enable = <1>;
+		thd-volts-l = <
+			2750 2650 2500
+			2800 2700 2550
+			2900 2800 2650
+			3100 3000 2850
+			3250 3150 3000>;
+		thd-volts-h = <
+			2850 2750 2650
+			2900 2800 2700
+			3000 2900 2800
+			3200 3100 3000
+			3350 3250 3150>;
+		bat0-thd-volts-l = <
+			2750 2650 2500
+			2800 2700 2550
+			2900 2800 2650
+			3100 3000 2850
+			3250 3150 3000>;
+		bat0-thd-volts-h = <
+			2850 2750 2650
+			2900 2800 2700
+			3000 2900 2800
+			3200 3100 3000
+			3350 3250 3150>;
+		bat1-thd-volts-l = <
+			2750 2650 2500
+			2800 2700 2550
+			2900 2800 2650
+			3100 3000 2850
+			3250 3150 3000>;
+		bat1-thd-volts-h = <
+			2850 2750 2650
+			2900 2800 2700
+			3000 2900 2800
+			3200 3100 3000
+			3350 3250 3150>;
+		lvsys-thd-volt-l = <2900>;
+		lvsys-thd-volt-h = <3100>;
+		temperature-stage-threshold = <25 10 0 (-5)>;
+
+		bat0-aging-threshold = <1000 2000>;
+		bat0-aging-volts-t0 =  <0 0>;
+		bat0-aging-volts-t1 =  <0 0>;
+		bat0-aging-volts-t2 =  <0 0>;
+		bat0-aging-volts-t3 =  <0 0>;
+		bat1-aging-threshold = <1000 2000>;
+		bat1-aging-volts-t0 =  <0 0>;
+		bat1-aging-volts-t1 =  <0 0>;
+		bat1-aging-volts-t2 =  <0 0>;
+		bat1-aging-volts-t3 =  <0 0>;
+
+		pt-shutdown-enable = <0>;
+		throttle-level = <0 1 2 3>,
+						<0 1 2 3>,
+						<0 1 2 3>,
+						<0 1 2 3>,
+						<0 1 2 3>;
+		bootmode = <&chosen>;
+		gauge = <&mtk_gauge>;
+	};
+
+&cpu_power_throttling {
+		compatible = "mediatek,cpu-power-throttling";
+
+		lbat-max-level = <3>;
+		lbat-limit-freq-lv1 = < 1800000 2200000 2147483647>;
+		lbat-limit-freq-lv2 = < 1600000 1900000 2147483647>;
+		lbat-limit-freq-lv3 = < 1100000 1200000 2147483647>;
+
+		oc-max-level = <2>;
+		oc-limit-freq-lv1 = < 2147483647  2147483647 2147483647>;
+		oc-limit-freq-lv2 = < 900000  900000 1300000>;
+
+		soc-max-level = <3>;
+		soc-limit-freq-lv1 = < 2147483647  2147483647 2147483647>;
+		soc-limit-freq-lv2 = < 2000000 2200000 2147483647>;
+		soc-limit-freq-lv3 = < 1700000 2000000 2147483647>;
+	};
+
+&gpu_power_throttling {
+		compatible = "mediatek,gpu-power-throttling";
+
+		lbat-max-level = <3>;
+		lbat-limit-freq = <956000 842000 265000>;
+
+		oc-max-level = <2>;
+		oc-limit-freq = <1200000 700000>;
+
+		soc-max-level = <3>;
+		soc-limit-freq = <2147483647 956000 842000>;
+	};
+
+&md_power_throttling {
+		compatible = "mediatek,md-power-throttling";
+		lbat-dedicate-volts = < 3350 3250 3100 2950 2800 >;
+		lbat-max-level = <4>;
+		lbat-reduce-tx-lv1 = <0>;
+		lbat-reduce-tx-lv2 = <0>;
+		lbat-reduce-tx-lv3 = <0>;
+		lbat-reduce-tx-lv4 = <0>;
+
+		oc-max-level = <2>;
+		oc-reduce-tx-lv1 = <0>;
+		oc-reduce-tx-lv2 = <0>;
+
+		soc-max-level = <0>;
+	};
+
+&bp_thl {
+		compatible = "mediatek,mtk-bp-thl";
+
+		max-throttle-level = <3>;
+		soc-max-stage = <3>;
+		soc-limit-threshold = <25 5 2>;
+		soc-release-threshold = <26 6 3>;
+		temperature-max-stage = <4>;
+		temperature-stage-threshold = <25 10 0 (-5)>;
+		soc-throttle-level = <
+			0 1 2 3
+			0 1 2 3
+			0 1 2 3
+			0 1 2 3
+			0 3 3 3>;
+	};
